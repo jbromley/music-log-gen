@@ -20,7 +20,8 @@ from typing import Any
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT, TA_CENTER
-from reportlab.lib.pagesizes import letter, landscape
+from reportlab.lib import pagesizes
+from reportlab.lib.pagesizes import landscape, portrait
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import (
@@ -41,8 +42,8 @@ except ImportError:  # pragma: no cover
 
 
 DEFAULTS: dict[str, Any] = {
+    "paper_size": "letter",
     "page": {
-        "size": "letter",
         "orientation": "portrait",
         "margin_left": 0.45,
         "margin_right": 0.45,
@@ -110,12 +111,46 @@ def load_data(path: Path) -> dict[str, Any]:
 
 def page_size(cfg: dict[str, Any]):
     page = cfg["page"]
-    if str(page.get("size", "letter")).lower() != "letter":
-        raise SystemExit("This version currently supports US Letter only.")
-    size = letter
-    if str(page.get("orientation", "portrait")).lower() == "landscape":
-        size = landscape(size)
-    return size
+
+    # Preferred syntax:
+    #
+    #   config:
+    #     paper_size: b5
+    #
+    # For backward compatibility, config.page.paper_size is also accepted.
+    name = str(
+        cfg.get("paper_size", page.get("paper_size", "letter"))
+    ).strip()
+    key = name.upper()
+    compact = key.replace("-", "").replace("_", "").replace(" ", "")
+    aliases = {
+        "11X17": "ELEVENSEVENTEEN",
+        "11X17IN": "ELEVENSEVENTEEN",
+        "JUNIORLEGAL": "JUNIOR_LEGAL",
+        "HALFLETTER": "HALF_LETTER",
+        "GOVLETTER": "GOV_LETTER",
+        "GOVLEGAL": "GOV_LEGAL",
+    }
+    key = aliases.get(compact, key)
+    size = getattr(pagesizes, key, None)
+    if size is None or not isinstance(size, tuple) or len(size) != 2:
+        accepted = sorted(
+            n.lower() for n in dir(pagesizes)
+            if n.isupper() and isinstance(getattr(pagesizes, n), tuple)
+            and len(getattr(pagesizes, n)) == 2
+        )
+        raise SystemExit(
+            f'Unknown paper size "{name}". Accepted sizes: ' + ", ".join(accepted)
+        )
+
+    orientation = str(page.get("orientation", "portrait")).lower()
+    if orientation == "landscape":
+        return landscape(size)
+    if orientation == "portrait":
+        return portrait(size)
+    raise SystemExit(
+        f'Unknown orientation "{orientation}". Use "portrait" or "landscape".'
+    )
 
 
 def inches(value: Any) -> float:
@@ -242,6 +277,17 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
     return table
 
 
+
+def pdf_keywords(value: Any):
+    """Normalize YAML/JSON keywords for ReportLab PDF metadata."""
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return [str(item) for item in value]
+    return str(value)
+
+
+
 def build_pdf(data: dict[str, Any], output: Path) -> None:
     cfg = deep_merge(DEFAULTS, data.get("config", {}))
     size = page_size(cfg)
@@ -264,6 +310,8 @@ def build_pdf(data: dict[str, Any], output: Path) -> None:
         bottomMargin=bottom,
         title=str(data.get("document_title", "Practice Logs")),
         author=str(data.get("author", "")),
+        subject=str(data.get("subject", "")),
+        keywords=pdf_keywords(data.get("keywords")),
     )
     frame = Frame(
         left, bottom, usable_width, usable_height,
@@ -285,7 +333,12 @@ def build_pdf(data: dict[str, Any], output: Path) -> None:
         canvas.restoreState()
 
     doc.addPageTemplates([
-        PageTemplate(id="practice", frames=[frame], onPage=draw_page_header)
+        PageTemplate(
+            id="practice",
+            frames=[frame],
+            onPage=draw_page_header,
+            pagesize=size,
+        )
     ])
 
     document_title_style = ParagraphStyle(
