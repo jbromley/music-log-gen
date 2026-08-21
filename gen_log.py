@@ -8,7 +8,7 @@ Pagination rule:
   * split only units that are themselves taller than one usable page.
 
 Usage:
-    python practice_log_generator.py practice_logs.yaml practice_logs.pdf
+    python gen_log.py practice_logs.yaml practice_logs.pdf
 """
 
 from __future__ import annotations
