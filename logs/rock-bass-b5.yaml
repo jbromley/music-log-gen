@@ -12,8 +12,8 @@ config:
     orientation: portrait
     margin_left: 0.5
     margin_right: 0.5
-    margin_top: 0.5
-    margin_bottom: 0.5
+    margin_top: 0.25
+    margin_bottom: 0.25
 
   style:
     document_title_font: Helvetica-Bold
@@ -34,7 +34,7 @@ config:
 
   table:
     exercise_header: Exercise
-    sessions: 6
+    sessions: 5
     session_headers: ["", "", "", "", "", "", ""]
 
 units:
