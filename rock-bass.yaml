@@ -1,0 +1,163 @@
+document_title: Rock Bass
+
+config:
+  page:
+    size: letter
+    orientation: portrait
+    margin_left: 0.5
+    margin_right: 0.5
+    margin_top: 0.5
+    margin_bottom: 0.5
+
+  style:
+    document_title_font: Helvetica-Bold
+    document_title_size: 18
+    document_title_gap: 0.20
+    header_font: Helvetica
+    header_size: 10
+    header_offset: 0.12
+    title_size: 14
+    table_font_size: 10
+    row_height: 0.25
+    header_height: 0.30
+    exercise_col_fraction: 0.15
+    line_width: 0.5
+    outer_line_width: 1.0
+    title_gap: 0.08
+    unit_gap: 0.16
+
+  table:
+    exercise_header: Exercise
+    sessions: 6
+    session_headers: ["", "", "", "", "", "", ""]
+
+units:
+  - title: Rock Bass Unit 1
+    exercises:
+      - 1 (2f)
+      - 2
+      - 3
+      - 4 (3f)
+      - 5
+      - 6 (control)
+      - 7
+      - 8
+      - 9
+      - 15 (3f)
+      - 16 (3f)
+      - 17 (3f)
+      - 18 (3f)
+      - 10
+      - 11
+      - 12
+      - 13
+      - 14 (technique)
+      - Lick of the week
+
+  - title: Rock Bass Unit 2
+    exercises:
+      - 1
+      - 2
+      - 2 var 1
+      - 2 var 2
+      - 2 var 3
+      - 2 var 4
+      - 2 var 5
+      - Lick of the week
+      - Hazard 1
+      - 3 (technique)
+
+  - title: Rock Bass Unit 3
+    exercises:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7 (technique)
+
+  - title: Rock Bass Unit 4
+    exercises:
+      - 1
+      - 2
+      - 3
+      - Lick of the week
+
+  - title: Rock Bass Unit 5
+    exercises:
+      - Ex 1
+      - Ex 2
+      - 1
+      - Ex 3
+      - Ex 4
+      - 2 (technique)
+      - Ex 5
+      - Ex 6
+      - Lick of the week
+
+  - title: Rock Bass Unit 6 - Finger busters
+    exercises:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+      - 8
+      - 9 (string crossing)
+      - Ex 1
+      - Ex 2
+
+  - title: Rock Bass Unit 7 - 10ths in rock
+    exercises:
+      - Ex 1
+      - Ex 2
+      - Ex 3
+      - Ex 4
+      - Ex 5
+      - 1
+      - 2
+      - 4
+      - 3 (technique)
+      - Lick of the week
+
+  - title: Rock Bass Unit 8 - In the studio
+    exercises:
+      - Ex 1
+      - Ex 2
+      - Hazard 2
+      - Move theme excerpt
+      - 3 (technique)
+      - Lick of the week
+
+  - title: Rock Bass Unit 9 - Solid time studies
+    exercises:
+      - 1
+      - 2
+      - 3
+      - 4 (dexterity)
+      - Lick of the week
+      - 5
+      - Var A
+      - Var B
+      - Var C
+      - Var D
+      - 6 (technique)
+
+  - title: Rock Bass Unit 10 - More hazard studies
+    exercises:
+      - Hazard 3
+      - Hazard 4
+      - 1 (technique)
+      - Lick of the week
+
+  - title: Rock Bass Unit 11
+    exercises:
+      - 1 (5/8)
+      - 1 (7/8)
+      - 2
+      - 3
+      - 4 (technique)
+      - Lick of the week

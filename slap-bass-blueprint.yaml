@@ -1,0 +1,219 @@
+document_title: Slap Bass Blueprint
+
+config:
+  page:
+    size: letter
+    orientation: portrait
+    margin_left: 0.5
+    margin_right: 0.5
+    margin_top: 0.5
+    margin_bottom: 0.5
+
+  style:
+    document_title_font: Helvetica-Bold
+    document_title_size: 18
+    document_title_gap: 0.20
+    header_font: Helvetica
+    header_size: 10
+    header_offset: 0.12
+    title_size: 14
+    table_font_size: 10
+    row_height: 0.25
+    header_height: 0.30
+    exercise_col_fraction: 0.15
+    line_width: 0.5
+    outer_line_width: 1.0
+    title_gap: 0.08
+    unit_gap: 0.16
+
+  table:
+    exercise_header: Exercise
+    sessions: 6
+    session_headers: ["", "", "", "", "", "", ""]
+
+units:
+  - title: Lesson 1 - Slaps
+    exercises:
+      - 1
+      - 1
+
+  - title: Lesson 2 - Slaps and pops
+    exercises:
+      - 1
+      - 1
+
+  - title: Lesson 3 - Ghost notes and double stops
+    exercises:
+      - 1
+      - 9
+      - 17
+      - 1
+      - 9
+      - 17
+      - 1
+      - 9
+      - 17
+
+  - title: Lesson 4 - The Slappening
+    exercises:
+      - 1
+      - 9
+      - 17
+      - 25
+      - 33
+      - 1
+      - 9
+      - 17
+      - 25
+      - 33
+      - 1
+      - 9
+      - 17
+      - 25
+      - 33
+      - 1
+      - 9
+      - 17
+      - 25
+      - 33
+
+  - title: Lesson 5 - Muting, setup, and tone
+    exercises:
+      - 1
+      - 5
+      - 9
+      - 1
+      - 5
+      - 9
+      - 1
+      - 5
+      - 9
+
+  - title: Lesson 6 - Left-hand techniques
+    exercises:
+      - 1
+      - 9
+      - 1
+      - 9
+      - 1
+      - 9
+
+  - title: Lesson 6 - Left-hand techniques
+    exercises:
+      - 1
+      - 9
+      - 1
+      - 9
+      - 1
+      - 9
+
+  - title: Lesson 7 - Basic double-thumb exercise
+    exercises:
+      - 1
+      - 3
+      - 11
+      - 15
+      - 1
+      - 3
+      - 11
+      - 15
+      - 1
+      - 3
+      - 11
+      - 15
+
+  - title: Lesson 8 - Slaptastic
+    exercises:
+      - 1
+      - 3
+      - 11
+      - 18
+      - 25
+      - 27
+      - 35
+      - 43
+      - 49
+      - 1
+      - 3
+      - 11
+      - 18
+      - 25
+      - 27
+      - 35
+      - 43
+      - 49
+      - 1
+      - 3
+      - 11
+      - 18
+      - 25
+      - 27
+      - 35
+      - 43
+      - 49
+
+  - title: Lesson 9 - Double-thumbing tricks
+    exercises:
+      - 1
+      - 7
+      - 11
+      - 17
+      - 21
+      - 1
+      - 7
+      - 11
+      - 17
+      - 21
+      - 1
+      - 7
+      - 11
+      - 17
+      - 21
+
+  - title: Lesson 10 - Double pops
+    exercises:
+      - 1
+      - 7
+      - 11
+      - 1
+      - 7
+      - 11
+      - 1
+      - 7
+      - 11
+
+  - title: Lesson 10 - Double pops
+    exercises:
+      - 1
+      - 7
+      - 11
+      - 1
+      - 7
+      - 11
+      - 1
+      - 7
+      - 11
+
+  - title: Lesson 11 - License to slap
+    exercises:
+      - 1
+      - 9
+      - 17
+      - 29
+      - 37
+      - 41
+      - 46
+      - 1
+      - 9
+      - 17
+      - 29
+      - 37
+      - 41
+      - 46
+      - 1
+      - 9
+      - 17
+      - 29
+      - 37
+      - 41
+      - 46
