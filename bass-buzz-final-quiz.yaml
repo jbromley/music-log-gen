@@ -1,0 +1,51 @@
+document_title: BassBuzz Final Quiz
+
+config:
+  page:
+    size: letter
+    orientation: portrait
+    margin_left: 0.5
+    margin_right: 0.5
+    margin_top: 0.5
+    margin_bottom: 0.5
+
+  style:
+    document_title_font: Helvetica-Bold
+    document_title_size: 18
+    document_title_gap: 0.20
+    header_font: Helvetica
+    header_size: 10
+    header_offset: 0.12
+    title_size: 14
+    table_font_size: 10
+    row_height: 0.25
+    header_height: 0.30
+    exercise_col_fraction: 0.15
+    line_width: 0.5
+    outer_line_width: 1.0
+    title_gap: 0.08
+    unit_gap: 0.16
+
+  table:
+    exercise_header: Exercise
+    sessions: 6
+    session_headers: ["", "", "", "", "", "", ""]
+
+units:
+  - title: Lessons
+    exercises:
+      - M4L5
+      - Billy Jean
+      - M6L2
+      - M6L3
+      - M6L4
+      - M7L2
+      - M9L1
+      - M9L5
+      - M11L3
+      - M12L1
+      - M12L2
+      - M12L5
+      - M13L2
+      - M13L6
+      - M14L4

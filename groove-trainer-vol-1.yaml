@@ -1,0 +1,116 @@
+document_title: Talking Bass Groove Trainer Vol. 1
+
+config:
+  page:
+    size: letter
+    orientation: portrait
+    margin_left: 0.5
+    margin_right: 0.5
+    margin_top: 0.5
+    margin_bottom: 0.5
+
+  style:
+    document_title_font: Helvetica-Bold
+    document_title_size: 18
+    document_title_gap: 0.20
+    header_font: Helvetica
+    header_size: 10
+    header_offset: 0.12
+    title_size: 14
+    table_font_size: 10
+    row_height: 0.25
+    header_height: 0.30
+    exercise_col_fraction: 0.15
+    line_width: 0.5
+    outer_line_width: 1.0
+    title_gap: 0.08
+    unit_gap: 0.16
+
+  table:
+    exercise_header: Exercise
+    sessions: 6
+    session_headers: ["", "", "", "", "", "", ""]
+
+units:
+  - title: Module 1 - Lessons
+    exercises:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+      - 8
+      - 9
+      - 10
+      - 11
+      - 12
+      - 13
+      - 14
+      - 15
+      - 16
+      - 17
+
+  - title: Module 2 - Grooves
+    exercises:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+      - 8
+      - 9
+      - 10
+      - 11
+      - 12
+      - 13
+      - 14
+      - 15
+      - 16
+      - 17
+      - 18
+      - 19
+      - 20
+      - 21
+      - 22
+      - 23
+      - 24
+      - 25
+      - 26
+      - 27
+      - 28
+      - 29
+      - 30
+      - 31
+      - 32
+      - 33
+      - 34
+      - 35
+      - 36
+      - 37
+      - 38
+      - 39
+      - 40
+      - 41
+      - 42
+      - 43
+      - 44
+      - 45
+      - 46
+      - 47
+      - 48
+      - 49
+      - 50
+      - 51
+      - 52
+      - 53
+      - 54
+      - 55
+      - 56
+      - 57
+      - 58
+      - 59
+      - 60
