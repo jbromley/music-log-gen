@@ -70,6 +70,7 @@ DEFAULTS: dict[str, Any] = {
         "exercise_col_fraction": 0.34,
         "line_width": 0.75,
         "outer_line_width": 1.0,
+        "repeat_line_width": 1.75,
         "cell_left_padding": 5,
         "cell_right_padding": 4,
         "cell_top_padding": 2,
@@ -168,13 +169,26 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
         session_headers = list(session_headers[:sessions])
 
     exercise_header = unit.get("exercise_header", tc.get("exercise_header", "Exercise"))
-    data = [[exercise_header, *session_headers]]
-    for ex in unit.get("exercises", []):
+
+    repeats = int(unit.get("repeats", 1))
+    if repeats < 1:
+        raise ValueError(
+            f'Unit "{unit.get("title", "")}" has repeats={repeats}; repeats must be at least 1.'
+        )
+
+    exercises = list(unit.get("exercises", []))
+    exercise_rows = []
+    for ex in exercises:
         if isinstance(ex, dict):
             name = str(ex.get("name", ""))
         else:
             name = str(ex)
-        data.append([name] + [""] * sessions)
+        exercise_rows.append([name] + [""] * sessions)
+
+    data = [[exercise_header, *session_headers]]
+    for _ in range(repeats):
+        # Copy each row so ReportLab receives independent row objects.
+        data.extend([list(row) for row in exercise_rows])
 
     first_fraction = float(st.get("exercise_col_fraction", 0.34))
     first_width = usable_width * first_fraction
@@ -196,7 +210,7 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
 
     line_width = float(st["line_width"])
     outer_line_width = float(st["outer_line_width"])
-    table.setStyle(TableStyle([
+    style_commands = [
         ("FONTNAME", (0, 0), (-1, -1), st["font"]),
         ("FONTNAME", (0, 0), (-1, 0), st["title_font"]),
         ("FONTSIZE", (0, 0), (-1, -1), float(st["table_font_size"])),
@@ -208,7 +222,23 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
         ("BOTTOMPADDING", (0, 0), (-1, -1), float(st["cell_bottom_padding"])),
         ("GRID", (0, 0), (-1, -1), line_width, colors.black),
         ("BOX", (0, 0), (-1, -1), outer_line_width, colors.black),
-    ]))
+    ]
+
+    # A repeated exercise list is rendered as one continuous table.  Mark the
+    # end of each repetition except the last with a heavier horizontal rule.
+    if repeats > 1 and exercise_rows:
+        repeat_line_width = float(st["repeat_line_width"])
+        rows_per_repeat = len(exercise_rows)
+        for repetition in range(1, repeats):
+            # Row 0 is the table header, so the last row of repetition N is
+            # N * rows_per_repeat.
+            boundary_row = repetition * rows_per_repeat
+            style_commands.append(
+                ("LINEBELOW", (0, boundary_row), (-1, boundary_row),
+                 repeat_line_width, colors.black)
+            )
+
+    table.setStyle(TableStyle(style_commands))
     return table
 
 
