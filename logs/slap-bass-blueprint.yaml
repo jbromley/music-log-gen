@@ -1,11 +1,20 @@
 document_title: Slap Bass Blueprint
+author: J. Bromley
+subject: Slap Bass Blueprint practice log
+keywords:
+  - bass
+  - practice
+  - funk
+  - video
 
 config:
+  paper_size: b5
+
   page:
-    size: letter
     orientation: portrait
-    margin_left: 0.5
-    margin_right: 0.5
+    mirrored_margins: true
+    margin_inside: 0.5
+    margin_outside: 0.25
     margin_top: 0.5
     margin_bottom: 0.5
 

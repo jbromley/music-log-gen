@@ -1,9 +1,20 @@
 document_title: Rock Bass Practice Logs
+author: J. Bromley
+subject: practice log
+keywords:
+  - bass
+  - practice
+  - rock
+  - book
 
 config:
+  paper_size: b5
+
   page:
-    size: letter
     orientation: portrait
+    mirrored_margins: true
+    margin_inside: 0.5
+    margin_outside: 0.25
     margin_left: 0.75
     margin_right: 0.5
     margin_top: 0.5

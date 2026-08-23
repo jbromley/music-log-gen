@@ -1,11 +1,19 @@
 document_title: Talking Bass Groove Trainer Vol. 2
+author: J. Bromley
+subject: Groove Trainer Volume 1 practice log
+keywords:
+  - bass
+  - practice
+  - video
 
 config:
+  paper_size: b5
+
   page:
-    size: letter
     orientation: portrait
-    margin_left: 0.5
-    margin_right: 0.5
+    mirrored_margins: true
+    margin_inside: 0.5
+    margin_outside: 0.25
     margin_top: 0.5
     margin_bottom: 0.5
 
