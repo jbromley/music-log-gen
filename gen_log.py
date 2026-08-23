@@ -8,7 +8,7 @@ Pagination rule:
   * split only units that are themselves taller than one usable page.
 
 Usage:
-    python practice_log_generator.py practice_logs.yaml practice_logs.pdf
+    python gen_log.py practice_logs.yaml practice_logs.pdf
 """
 
 from __future__ import annotations
@@ -18,16 +18,15 @@ import json
 from pathlib import Path
 from typing import Any
 
-from reportlab.lib import colors
-from reportlab.lib.enums import TA_LEFT, TA_CENTER
-from reportlab.lib import pagesizes
+from reportlab.lib import colors, pagesizes
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import landscape, portrait
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import (
     BaseDocTemplate,
-    Frame,
     CondPageBreak,
+    Frame,
     PageTemplate,
     Paragraph,
     Spacer,
@@ -307,14 +306,14 @@ def build_pdf(data: dict[str, Any], output: Path) -> None:
         # Odd/right-hand pages: binding edge is on the left.
         odd_left, odd_right = inside, outside
         # Even/left-hand pages: binding edge is on the right.
-        even_left, even_right = outside, inside
+        even_left, _even_right = outside, inside
         usable_width = size[0] - inside - outside
         left, right = odd_left, odd_right
     else:
         left = inches(page["margin_left"])
         right = inches(page["margin_right"])
         odd_left, odd_right = left, right
-        even_left, even_right = left, right
+        even_left, _even_right = left, right
         usable_width = size[0] - left - right
 
     usable_height = size[1] - top - bottom
@@ -437,8 +436,8 @@ def build_pdf(data: dict[str, Any], output: Path) -> None:
         #     space before starting it;
         #   * if the unit is taller than a whole page, do not force a break, so
         #     the Table can split naturally by rows.
-        title_w, title_h = title.wrap(usable_width, usable_height)
-        table_w, table_h = table.wrap(usable_width, usable_height)
+        _title_w, title_h = title.wrap(usable_width, usable_height)
+        _table_w, table_h = table.wrap(usable_width, usable_height)
         unit_height = title_h + inches(st["title_gap"]) + table_h
 
         if unit_height <= usable_height:
