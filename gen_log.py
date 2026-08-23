@@ -20,7 +20,8 @@ from typing import Any
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT, TA_CENTER
-from reportlab.lib.pagesizes import letter, landscape
+from reportlab.lib import pagesizes
+from reportlab.lib.pagesizes import landscape, portrait
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import (
@@ -41,13 +42,16 @@ except ImportError:  # pragma: no cover
 
 
 DEFAULTS: dict[str, Any] = {
+    "paper_size": "letter",
     "page": {
-        "size": "letter",
         "orientation": "portrait",
         "margin_left": 0.45,
         "margin_right": 0.45,
         "margin_top": 0.45,
         "margin_bottom": 0.45,
+        "mirrored_margins": False,
+        "margin_inside": 0.55,
+        "margin_outside": 0.35,
     },
     "style": {
         "font": "Helvetica",
@@ -110,12 +114,46 @@ def load_data(path: Path) -> dict[str, Any]:
 
 def page_size(cfg: dict[str, Any]):
     page = cfg["page"]
-    if str(page.get("size", "letter")).lower() != "letter":
-        raise SystemExit("This version currently supports US Letter only.")
-    size = letter
-    if str(page.get("orientation", "portrait")).lower() == "landscape":
-        size = landscape(size)
-    return size
+
+    # Preferred syntax:
+    #
+    #   config:
+    #     paper_size: b5
+    #
+    # For backward compatibility, config.page.paper_size is also accepted.
+    name = str(
+        cfg.get("paper_size", page.get("paper_size", "letter"))
+    ).strip()
+    key = name.upper()
+    compact = key.replace("-", "").replace("_", "").replace(" ", "")
+    aliases = {
+        "11X17": "ELEVENSEVENTEEN",
+        "11X17IN": "ELEVENSEVENTEEN",
+        "JUNIORLEGAL": "JUNIOR_LEGAL",
+        "HALFLETTER": "HALF_LETTER",
+        "GOVLETTER": "GOV_LETTER",
+        "GOVLEGAL": "GOV_LEGAL",
+    }
+    key = aliases.get(compact, key)
+    size = getattr(pagesizes, key, None)
+    if size is None or not isinstance(size, tuple) or len(size) != 2:
+        accepted = sorted(
+            n.lower() for n in dir(pagesizes)
+            if n.isupper() and isinstance(getattr(pagesizes, n), tuple)
+            and len(getattr(pagesizes, n)) == 2
+        )
+        raise SystemExit(
+            f'Unknown paper size "{name}". Accepted sizes: ' + ", ".join(accepted)
+        )
+
+    orientation = str(page.get("orientation", "portrait")).lower()
+    if orientation == "landscape":
+        return landscape(size)
+    if orientation == "portrait":
+        return portrait(size)
+    raise SystemExit(
+        f'Unknown orientation "{orientation}". Use "portrait" or "landscape".'
+    )
 
 
 def inches(value: Any) -> float:
@@ -242,17 +280,43 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
     return table
 
 
+
+def pdf_keywords(value: Any):
+    """Normalize YAML/JSON keywords for ReportLab PDF metadata."""
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return [str(item) for item in value]
+    return str(value)
+
+
+
 def build_pdf(data: dict[str, Any], output: Path) -> None:
     cfg = deep_merge(DEFAULTS, data.get("config", {}))
     size = page_size(cfg)
     page = cfg["page"]
     st = cfg["style"]
 
-    left = inches(page["margin_left"])
-    right = inches(page["margin_right"])
     top = inches(page["margin_top"])
     bottom = inches(page["margin_bottom"])
-    usable_width = size[0] - left - right
+    mirrored = bool(page.get("mirrored_margins", False))
+
+    if mirrored:
+        inside = inches(page["margin_inside"])
+        outside = inches(page["margin_outside"])
+        # Odd/right-hand pages: binding edge is on the left.
+        odd_left, odd_right = inside, outside
+        # Even/left-hand pages: binding edge is on the right.
+        even_left, even_right = outside, inside
+        usable_width = size[0] - inside - outside
+        left, right = odd_left, odd_right
+    else:
+        left = inches(page["margin_left"])
+        right = inches(page["margin_right"])
+        odd_left, odd_right = left, right
+        even_left, even_right = left, right
+        usable_width = size[0] - left - right
+
     usable_height = size[1] - top - bottom
 
     doc = BaseDocTemplate(
@@ -264,10 +328,17 @@ def build_pdf(data: dict[str, Any], output: Path) -> None:
         bottomMargin=bottom,
         title=str(data.get("document_title", "Practice Logs")),
         author=str(data.get("author", "")),
+        subject=str(data.get("subject", "")),
+        keywords=pdf_keywords(data.get("keywords")),
     )
-    frame = Frame(
-        left, bottom, usable_width, usable_height,
-        id="main",
+    odd_frame = Frame(
+        odd_left, bottom, usable_width, usable_height,
+        id="odd",
+        leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0,
+    )
+    even_frame = Frame(
+        even_left, bottom, usable_width, usable_height,
+        id="even",
         leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0,
     )
 
@@ -284,9 +355,34 @@ def build_pdf(data: dict[str, Any], output: Path) -> None:
         canvas.drawCentredString(size[0] / 2.0, header_y, document_title)
         canvas.restoreState()
 
-    doc.addPageTemplates([
-        PageTemplate(id="practice", frames=[frame], onPage=draw_page_header)
-    ])
+    if mirrored:
+        # Alternate right-hand (odd) and left-hand (even) page frames so the
+        # larger inside margin always stays next to the binding.
+        doc.addPageTemplates([
+            PageTemplate(
+                id="odd",
+                frames=[odd_frame],
+                onPage=draw_page_header,
+                pagesize=size,
+                autoNextPageTemplate="even",
+            ),
+            PageTemplate(
+                id="even",
+                frames=[even_frame],
+                onPage=draw_page_header,
+                pagesize=size,
+                autoNextPageTemplate="odd",
+            ),
+        ])
+    else:
+        doc.addPageTemplates([
+            PageTemplate(
+                id="practice",
+                frames=[odd_frame],
+                onPage=draw_page_header,
+                pagesize=size,
+            )
+        ])
 
     document_title_style = ParagraphStyle(
         "DocumentTitle",
