@@ -1,0 +1,29 @@
+document_title: Practice Summary Log
+author: J. Bromley
+subject: Music practice summary
+keywords: [music, practice, summary]
+
+start_date: 2026-08-24
+topics:
+  - Bass
+  - Guitar
+  - Piano
+
+config:
+  paper_size: b5
+  page:
+    orientation: portrait
+    mirrored_margins: true
+    margin_inside: 0.50
+    margin_outside: 0.25
+    margin_top: 0.45
+    margin_bottom: 0.45
+  style:
+    title_size: 12
+    title_gap: 0.20
+    date_col_width: 1.0
+    table_font_size: 9
+    line_width: 0.5
+    weekly_line_width: 0.75
+    outer_line_width: 1.0
+    line_color: black
