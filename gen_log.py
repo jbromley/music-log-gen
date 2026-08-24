@@ -445,12 +445,15 @@ def build_pdf(data: dict[str, Any], output: Path) -> None:
             # the complete title + table before starting it.
             required_start_height = unit_height
         else:
-            # The unit must span pages.  Do not allow its title to be orphaned
-            # at the bottom of a page: require enough room for the title, title
-            # gap, table header, and at least one exercise row.
+            # The unit must span pages. Do not start it near the bottom of a
+            # page unless there is room for the title, table header, and at
+            # least eight exercise rows. If the complete table has fewer than
+            # eight exercise rows, require the whole table instead.
+            minimum_start_rows = 8
             table_start_height = min(
                 table_h,
-                inches(st["header_height"]) + inches(st["row_height"]),
+                inches(st["header_height"])
+                + minimum_start_rows * inches(st["row_height"]),
             )
             required_start_height = (
                 title_h + inches(st["title_gap"]) + table_start_height
