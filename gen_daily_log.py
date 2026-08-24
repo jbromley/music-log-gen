@@ -123,15 +123,7 @@ def draw_daily_page(data: dict[str, Any], output: Path) -> None:
 
     top = float(page["margin_top"]) * inch
     bottom = float(page["margin_bottom"]) * inch
-
-    if bool(page.get("mirrored_margins", False)):
-        left = float(page["margin_inside"]) * inch
-        right = float(page["margin_outside"]) * inch
-    else:
-        left = float(page["margin_left"]) * inch
-        right = float(page["margin_right"]) * inch
-
-    usable_width = page_width - left - right
+    mirrored = bool(page.get("mirrored_margins", False))
 
     c = canvas.Canvas(str(output), pagesize=(page_width, page_height))
     document_title = str(data.get("document_title", data.get("title", "Daily Practice Log")))
@@ -151,12 +143,7 @@ def draw_daily_page(data: dict[str, Any], output: Path) -> None:
         spaceBefore=0,
         spaceAfter=0,
     )
-    p = Paragraph(title, title_style)
-    _, title_h = p.wrap(usable_width, page_height)
-    title_y = page_height - top - title_h
-    p.drawOn(c, left, title_y)
 
-    content_top = title_y - float(style["title_gap"]) * inch
     line_height = float(style["line_height"]) * inch
     line_width = float(style["line_width"])
     line_color = parse_color(style["line_color"])
@@ -167,36 +154,60 @@ def draw_daily_page(data: dict[str, Any], output: Path) -> None:
     if line_height <= 0:
         raise SystemExit("line_height must be greater than zero.")
 
-    available_height = content_top - bottom
-    part_height = available_height / 3.0
-
-    for i in range(3):
-        part_top = content_top - i * part_height
-        part_bottom = content_top - (i + 1) * part_height
-
-        box_bottom = part_top - line_height
-        box_left = page_width - right - box_width
-        c.setStrokeColor(box_color)
-        c.setLineWidth(box_line_width)
-        c.rect(box_left, box_bottom, box_width, line_height, stroke=1, fill=0)
-
-        # Calculate the ruled-line positions first so the final line in each
-        # section can be drawn 1.5 times heavier than the normal ruled lines.
-        line_positions = []
-        y = box_bottom
-        while y >= part_bottom - 0.01:
-            line_positions.append(y)
-            y -= line_height
-
-        c.setStrokeColor(line_color)
-        for line_index, y in enumerate(line_positions):
-            if line_index == len(line_positions) - 1:
-                c.setLineWidth(line_width * 1.5)
+    # Generate two physical pages: page 1 is the front, page 2 is the back.
+    for page_number in (1, 2):
+        if mirrored:
+            inside = float(page["margin_inside"]) * inch
+            outside = float(page["margin_outside"]) * inch
+            if page_number % 2 == 1:
+                # Odd/right-hand page: binding edge is on the left.
+                left, right = inside, outside
             else:
-                c.setLineWidth(line_width)
-            c.line(left, y, page_width - right, y)
+                # Even/left-hand page: binding edge is on the right.
+                left, right = outside, inside
+        else:
+            left = float(page["margin_left"]) * inch
+            right = float(page["margin_right"]) * inch
 
-    c.showPage()
+        usable_width = page_width - left - right
+
+        p = Paragraph(title, title_style)
+        _, title_h = p.wrap(usable_width, page_height)
+        title_y = page_height - top - title_h
+        p.drawOn(c, left, title_y)
+
+        content_top = title_y - float(style["title_gap"]) * inch
+        available_height = content_top - bottom
+        part_height = available_height / 3.0
+
+        for i in range(3):
+            part_top = content_top - i * part_height
+            part_bottom = content_top - (i + 1) * part_height
+
+            box_bottom = part_top - line_height
+            box_left = page_width - right - box_width
+            c.setStrokeColor(box_color)
+            c.setLineWidth(box_line_width)
+            c.rect(box_left, box_bottom, box_width, line_height, stroke=1, fill=0)
+
+            # Calculate the ruled-line positions first so the final line in each
+            # section can be drawn 1.5 times heavier than the normal ruled lines.
+            line_positions = []
+            y = box_bottom
+            while y >= part_bottom - 0.01:
+                line_positions.append(y)
+                y -= line_height
+
+            c.setStrokeColor(line_color)
+            for line_index, y in enumerate(line_positions):
+                if line_index == len(line_positions) - 1:
+                    c.setLineWidth(line_width * 1.5)
+                else:
+                    c.setLineWidth(line_width)
+                c.line(left, y, page_width - right, y)
+
+        c.showPage()
+
     c.save()
 
 
