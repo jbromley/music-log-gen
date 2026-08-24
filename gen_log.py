@@ -441,8 +441,22 @@ def build_pdf(data: dict[str, Any], output: Path) -> None:
         unit_height = title_h + inches(st["title_gap"]) + table_h
 
         if unit_height <= usable_height:
-            story.append(CondPageBreak(unit_height))
+            # The whole unit fits on one fresh page, so require enough room for
+            # the complete title + table before starting it.
+            required_start_height = unit_height
+        else:
+            # The unit must span pages.  Do not allow its title to be orphaned
+            # at the bottom of a page: require enough room for the title, title
+            # gap, table header, and at least one exercise row.
+            table_start_height = min(
+                table_h,
+                inches(st["header_height"]) + inches(st["row_height"]),
+            )
+            required_start_height = (
+                title_h + inches(st["title_gap"]) + table_start_height
+            )
 
+        story.append(CondPageBreak(required_start_height))
         story.extend(block)
         if i != len(data.get("units", [])) - 1:
             story.append(Spacer(1, inches(st["unit_gap"])))
