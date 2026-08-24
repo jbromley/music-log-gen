@@ -280,6 +280,32 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
 
 
 
+
+class MirroredDocTemplate(BaseDocTemplate):
+    """Choose odd/even page templates from the actual PDF page number."""
+
+    def handle_pageBegin(self):
+        # self.page is the number of the page that has just ended.  The base
+        # implementation increments it at the start of the new page, so choose
+        # the template for self.page + 1 here.
+        if hasattr(self, "_mirrored_template_ids"):
+            next_page_number = self.page + 1
+            wanted = (
+                self._mirrored_template_ids[0]
+                if next_page_number % 2 == 1
+                else self._mirrored_template_ids[1]
+            )
+            for template in self.pageTemplates:
+                if template.id == wanted:
+                    self.pageTemplate = template
+                    break
+            else:
+                raise ValueError(f"Cannot find page template {wanted!r}")
+
+        super().handle_pageBegin()
+
+
+
 def pdf_keywords(value: Any):
     """Normalize YAML/JSON keywords for ReportLab PDF metadata."""
     if value is None:
@@ -318,7 +344,7 @@ def build_pdf(data: dict[str, Any], output: Path) -> None:
 
     usable_height = size[1] - top - bottom
 
-    doc = BaseDocTemplate(
+    doc = MirroredDocTemplate(
         str(output),
         pagesize=size,
         leftMargin=left,
@@ -355,24 +381,25 @@ def build_pdf(data: dict[str, Any], output: Path) -> None:
         canvas.restoreState()
 
     if mirrored:
-        # Alternate right-hand (odd) and left-hand (even) page frames so the
-        # larger inside margin always stays next to the binding.
+        # Select the frame from the actual physical page number.  Do not use
+        # autoNextPageTemplate here: when a ReportLab Table splits itself
+        # across a page boundary, automatic template switching is not reliable
+        # enough for mirrored margins.
         doc.addPageTemplates([
             PageTemplate(
                 id="odd",
                 frames=[odd_frame],
                 onPage=draw_page_header,
                 pagesize=size,
-                autoNextPageTemplate="even",
             ),
             PageTemplate(
                 id="even",
                 frames=[even_frame],
                 onPage=draw_page_header,
                 pagesize=size,
-                autoNextPageTemplate="odd",
             ),
         ])
+        doc._mirrored_template_ids = ("odd", "even")
     else:
         doc.addPageTemplates([
             PageTemplate(
