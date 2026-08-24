@@ -1,0 +1,27 @@
+document_title: Guitar Daily Practice Log
+title: Guitar Daily Practice Log
+author: J. Bromley
+subject: Guitar practice journal daily log
+keywords:
+  - music
+  - practice
+  - journal
+
+config:
+  paper_size: b5
+  page:
+    orientation: portrait
+    mirrored_margins: true
+    margin_inside: 0.50
+    margin_outside: 0.25
+    margin_top: 0.45
+    margin_bottom: 0.45
+  style:
+    title_size: 14
+    title_gap: 0.20
+    line_height: 0.25
+    line_width: 0.5
+    line_color: grey
+    box_width: 1.50
+    box_line_width: 1.0
+    box_color: black
