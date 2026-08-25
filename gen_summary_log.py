@@ -123,11 +123,7 @@ def main():
 
     pw, ph = resolve_page_size(cfg)
     top, bottom = float(page["margin_top"])*inch, float(page["margin_bottom"])*inch
-    if page.get("mirrored_margins", False):
-        left, right = float(page["margin_inside"])*inch, float(page["margin_outside"])*inch
-    else:
-        left, right = float(page["margin_left"])*inch, float(page["margin_right"])*inch
-    usable = pw-left-right
+    mirrored = bool(page.get("mirrored_margins", False))
 
     c = canvas.Canvas(str(args.output), pagesize=(pw,ph))
     c.setTitle(str(data.get("document_title","Practice Summary Log")))
@@ -140,60 +136,88 @@ def main():
         fontName=st["title_font"], fontSize=float(st["title_size"]),
         leading=float(st["title_size"])*1.1, alignment=TA_CENTER
     )
-    p = Paragraph("Practice Summary Log", title_style)
-    _, th = p.wrap(usable, ph)
-    ty = ph-top-th
-    p.drawOn(c,left,ty)
 
-    table_top = ty-float(st["title_gap"])*inch
     rh = 0.25*inch
     hh = 0.25*inch
-    available = table_top-bottom
-    nrows = int((available-hh)//rh)
-    if nrows < 1: raise SystemExit("No room for rows")
+    lc = colors.toColor(str(st["line_color"]))
 
-    rows=[["Date",*topics]]
-    for i in range(nrows):
-        d=start+timedelta(days=i)
-        rows.append([d.strftime("%a, %b %d").replace(" 0"," "), *([""]*len(topics))])
+    # Two PDF pages: front and back of one physical sheet.
+    # Dates continue from page 1 onto page 2.
+    date_offset = 0
 
-    date_w=float(st["date_col_width"])*inch
-    topic_w=(usable-date_w)/len(topics)
-    table=Table(rows,colWidths=[date_w]+[topic_w]*len(topics),
-                rowHeights=[hh]+[rh]*nrows,hAlign="LEFT")
+    for page_number in (1, 2):
+        if mirrored:
+            inside = float(page["margin_inside"])*inch
+            outside = float(page["margin_outside"])*inch
+            if page_number % 2 == 1:
+                left, right = inside, outside
+            else:
+                left, right = outside, inside
+        else:
+            left = float(page["margin_left"])*inch
+            right = float(page["margin_right"])*inch
 
-    lc=colors.toColor(str(st["line_color"]))
-    style_commands = [
-        ("FONTNAME",(0,0),(-1,-1),st["font"]),
-        ("FONTNAME",(0,0),(-1,0),st["header_font"]),
-        ("FONTSIZE",(0,0),(-1,-1),float(st["table_font_size"])),
-        ("ALIGN",(1,0),(-1,0),"CENTER"),
-        ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
-        ("LEFTPADDING",(0,0),(-1,-1),float(st["cell_left_padding"])),
-        ("RIGHTPADDING",(0,0),(-1,-1),float(st["cell_right_padding"])),
-        ("TOPPADDING",(0,0),(-1,-1),float(st["cell_top_padding"])),
-        ("BOTTOMPADDING",(0,0),(-1,-1),float(st["cell_bottom_padding"])),
-        ("GRID",(0,0),(-1,-1),float(st["line_width"]),lc),
-        ("BOX",(0,0),(-1,-1),float(st["outer_line_width"]),lc),
-    ]
+        usable = pw - left - right
 
-    # Emphasize week boundaries: after every seven data rows, draw a
-    # heavier horizontal rule across the entire table. Row 0 is the header,
-    # so rows 7, 14, 21, ... are the ends of seven-day blocks.
-    weekly_line_width = float(st["weekly_line_width"])
-    for row in range(7, nrows + 1, 7):
-        style_commands.append(
-            ("LINEBELOW", (0, row), (-1, row), weekly_line_width, lc)
+        p = Paragraph("Practice Summary Log", title_style)
+        _, th = p.wrap(usable, ph)
+        ty = ph - top - th
+        p.drawOn(c, left, ty)
+
+        table_top = ty - float(st["title_gap"])*inch
+        available = table_top - bottom
+
+        nrows = int((available - hh) // rh)
+        if nrows < 1:
+            raise SystemExit("No room for rows")
+
+        rows = [["Date", *topics]]
+        for i in range(nrows):
+            d = start + timedelta(days=date_offset + i)
+            rows.append([
+                d.strftime("%a, %b %d").replace(" 0", " "),
+                *([""] * len(topics))
+            ])
+
+        date_w = float(st["date_col_width"])*inch
+        topic_w = (usable - date_w) / len(topics)
+        table = Table(
+            rows,
+            colWidths=[date_w] + [topic_w] * len(topics),
+            rowHeights=[hh] + [rh] * nrows,
+            hAlign="LEFT"
         )
 
-    table.setStyle(TableStyle(style_commands))
-    # ReportLab Tables must be wrapped before drawOn() so that internal
-    # column/row positions are calculated.  Newer ReportLab versions do not
-    # reliably calculate these lazily during drawOn().
-    _table_w, table_h = table.wrapOn(c, usable, available)
-    table.drawOn(c, left, table_top - table_h)
+        style_commands = [
+            ("FONTNAME",(0,0),(-1,-1),st["font"]),
+            ("FONTNAME",(0,0),(-1,0),st["header_font"]),
+            ("FONTSIZE",(0,0),(-1,-1),float(st["table_font_size"])),
+            ("ALIGN",(1,0),(-1,0),"CENTER"),
+            ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+            ("LEFTPADDING",(0,0),(-1,-1),float(st["cell_left_padding"])),
+            ("RIGHTPADDING",(0,0),(-1,-1),float(st["cell_right_padding"])),
+            ("TOPPADDING",(0,0),(-1,-1),float(st["cell_top_padding"])),
+            ("BOTTOMPADDING",(0,0),(-1,-1),float(st["cell_bottom_padding"])),
+            ("GRID",(0,0),(-1,-1),float(st["line_width"]),lc),
+            ("BOX",(0,0),(-1,-1),float(st["outer_line_width"]),lc),
+        ]
 
-    c.showPage()
+        weekly_line_width = float(st["weekly_line_width"])
+        for local_row in range(1, nrows + 1):
+            global_row = date_offset + local_row
+            if global_row % 7 == 0:
+                style_commands.append(
+                    ("LINEBELOW", (0, local_row), (-1, local_row),
+                     weekly_line_width, lc)
+                )
+
+        table.setStyle(TableStyle(style_commands))
+        _table_w, table_h = table.wrapOn(c, usable, available)
+        table.drawOn(c, left, table_top - table_h)
+
+        date_offset += nrows
+        c.showPage()
+
     c.save()
 
 if __name__ == "__main__":
