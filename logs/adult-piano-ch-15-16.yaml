@@ -1,4 +1,4 @@
-document_title: Adult Piano Chapter 15 -
+document_title: Adult Piano Chapters 15 - 16
 author: J. Bromley
 subject: practice log
 keywords:
@@ -18,7 +18,7 @@ config:
     margin_bottom: 0.5
 
   style:
-    title_size: 14
+    title_size: 12
     table_font_size: 8
     row_height: 0.25
     header_height: 0.30
