@@ -57,7 +57,7 @@ DEFAULTS: dict[str, Any] = {
         "title_font": "Helvetica-Bold",
         "title_size": 11.0,
         "document_title_font": "Helvetica-Bold",
-        "document_title_size": 22.0,
+        "document_title_size": 16.0,
         "document_title_gap": 0.20,
         "header_font": "Helvetica",
         "header_size": 9.0,
