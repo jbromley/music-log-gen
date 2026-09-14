@@ -42,6 +42,7 @@ except ImportError:  # pragma: no cover
 
 DEFAULTS: dict[str, Any] = {
     "paper_size": "letter",
+    "start_page": 1,
     "page": {
         "orientation": "portrait",
         "margin_left": 0.45,
@@ -289,10 +290,13 @@ class MirroredDocTemplate(BaseDocTemplate):
         # implementation increments it at the start of the new page, so choose
         # the template for self.page + 1 here.
         if hasattr(self, "_mirrored_template_ids"):
-            next_page_number = self.page + 1
+            pdf_page_number = self.page + 1
+            logical_page_number = (
+                getattr(self, "_start_page", 1) + pdf_page_number - 1
+            )
             wanted = (
                 self._mirrored_template_ids[0]
-                if next_page_number % 2 == 1
+                if logical_page_number % 2 == 1
                 else self._mirrored_template_ids[1]
             )
             for template in self.pageTemplates:
@@ -321,6 +325,9 @@ def build_pdf(data: dict[str, Any], output: Path) -> None:
     size = page_size(cfg)
     page = cfg["page"]
     st = cfg["style"]
+    start_page = int(cfg.get("start_page", 1))
+    if start_page < 1:
+        raise SystemExit("start_page must be at least 1.")
 
     top = inches(page["margin_top"])
     bottom = inches(page["margin_bottom"])
@@ -356,6 +363,8 @@ def build_pdf(data: dict[str, Any], output: Path) -> None:
         subject=str(data.get("subject", "")),
         keywords=pdf_keywords(data.get("keywords")),
     )
+    doc._start_page = start_page
+
     odd_frame = Frame(
         odd_left, bottom, usable_width, usable_height,
         id="odd",
@@ -370,14 +379,22 @@ def build_pdf(data: dict[str, Any], output: Path) -> None:
     document_title = str(data.get("document_title", "Practice Logs"))
 
     def draw_page_header(canvas, doc_obj):
-        # Page 1 gets the large document title as part of the story.
-        # On later pages, repeat the document title in the top margin.
-        if canvas.getPageNumber() <= 1:
-            return
+        pdf_page_number = canvas.getPageNumber()
+        logical_page_number = start_page + pdf_page_number - 1
+
         canvas.saveState()
-        canvas.setFont(st["header_font"], float(st["header_size"]))
-        header_y = size[1] - top + inches(st["header_offset"])
-        canvas.drawCentredString(size[0] / 2.0, header_y, document_title)
+
+        # Page 1 gets the large document title as part of the story.
+        # On later PDF pages, repeat the document title in the top margin.
+        if pdf_page_number > 1:
+            canvas.setFont(st["header_font"], float(st["header_size"]))
+            header_y = size[1] - top + inches(st["header_offset"])
+            canvas.drawCentredString(size[0] / 2.0, header_y, document_title)
+
+        # Page number, centered in the bottom margin.
+        canvas.setFont(st["font"], 9.0)
+        canvas.drawCentredString(size[0] / 2.0, bottom / 2.0, str(logical_page_number))
+
         canvas.restoreState()
 
     if mirrored:

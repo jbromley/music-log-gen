@@ -24,6 +24,7 @@ except ImportError:
 
 DEFAULTS: dict[str, Any] = {
     "paper_size": "letter",
+    "start_page": 1,
     "page": {
         "orientation": "portrait",
         "margin_left": 0.45,
@@ -119,6 +120,9 @@ def draw_daily_page(data: dict[str, Any], output: Path) -> None:
     cfg = deep_merge(DEFAULTS, data.get("config", {}))
     page = cfg["page"]
     style = cfg["style"]
+    start_page = int(cfg.get("start_page", 1))
+    if start_page < 1:
+        raise SystemExit("start_page must be at least 1.")
     page_width, page_height = resolve_page_size(cfg)
 
     top = float(page["margin_top"]) * inch
@@ -154,8 +158,11 @@ def draw_daily_page(data: dict[str, Any], output: Path) -> None:
     if line_height <= 0:
         raise SystemExit("line_height must be greater than zero.")
 
-    # Generate two physical pages: page 1 is the front, page 2 is the back.
-    for page_number in (1, 2):
+    # Generate two physical pages: front and back of one sheet.  Mirrored
+    # margins follow the logical page numbers, so a document starting on an
+    # even page gets the correct binding edge.
+    for page_index in range(2):
+        page_number = start_page + page_index
         if mirrored:
             inside = float(page["margin_inside"]) * inch
             outside = float(page["margin_outside"]) * inch
@@ -185,7 +192,11 @@ def draw_daily_page(data: dict[str, Any], output: Path) -> None:
             part_bottom = content_top - (i + 1) * part_height
 
             box_bottom = part_top - line_height
-            box_left = page_width - right - box_width
+            # Put the box on the outside edge of the bound page.
+            if mirrored and page_number % 2 == 0:
+                box_left = left
+            else:
+                box_left = page_width - right - box_width
             c.setStrokeColor(box_color)
             c.setLineWidth(box_line_width)
             c.rect(box_left, box_bottom, box_width, line_height, stroke=1, fill=0)
@@ -205,6 +216,13 @@ def draw_daily_page(data: dict[str, Any], output: Path) -> None:
                 else:
                     c.setLineWidth(line_width)
                 c.line(left, y, page_width - right, y)
+
+        # Page number, centered in the bottom margin.
+        c.saveState()
+        c.setFillColor(colors.black)
+        c.setFont(style["font"], 9.0)
+        c.drawCentredString(page_width / 2.0, bottom / 2.0, str(page_number))
+        c.restoreState()
 
         c.showPage()
 

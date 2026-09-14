@@ -22,6 +22,7 @@ except ImportError:
 
 DEFAULTS = {
     "paper_size": "letter",
+    "start_page": 1,
     "page": {
         "orientation": "portrait",
         "margin_left": 0.45, "margin_right": 0.45,
@@ -113,6 +114,9 @@ def main():
     data = load_data(args.input)
     cfg = deep_merge(DEFAULTS, data.get("config", {}))
     page, st = cfg["page"], cfg["style"]
+    start_page = int(cfg.get("start_page", 1))
+    if start_page < 1:
+        raise SystemExit("start_page must be at least 1.")
 
     sv = args.start_date if args.start_date is not None else data.get("start_date")
     if sv is None: raise SystemExit("start_date is required")
@@ -145,7 +149,8 @@ def main():
     # Dates continue from page 1 onto page 2.
     date_offset = 0
 
-    for page_number in (1, 2):
+    for page_index in range(2):
+        page_number = start_page + page_index
         if mirrored:
             inside = float(page["margin_inside"])*inch
             outside = float(page["margin_outside"])*inch
@@ -216,6 +221,14 @@ def main():
         table.drawOn(c, left, table_top - table_h)
 
         date_offset += nrows
+
+        # Page number, centered in the bottom margin.
+        c.saveState()
+        c.setFillColor(colors.black)
+        c.setFont(st["font"], 9.0)
+        c.drawCentredString(pw / 2.0, bottom / 2.0, str(page_number))
+        c.restoreState()
+
         c.showPage()
 
     c.save()
