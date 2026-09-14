@@ -320,14 +320,16 @@ def pdf_keywords(value: Any):
 
 
 
-def build_pdf(data: dict[str, Any], output: Path) -> None:
+def build_pdf(data: dict[str, Any], output: Path, start_page: int | None = None) -> None:
     cfg = deep_merge(DEFAULTS, data.get("config", {}))
     size = page_size(cfg)
     page = cfg["page"]
     st = cfg["style"]
-    start_page = int(cfg.get("start_page", 1))
-    if start_page < 1:
-        raise SystemExit("start_page must be at least 1.")
+    # Page numbering is enabled only by the --start-page command-line switch.
+    # With no explicit value, --start-page starts numbering at 1.
+    if start_page is not None and start_page < 1:
+        raise SystemExit("--start-page must be at least 1.")
+    logical_start_page = start_page if start_page is not None else 1
 
     top = inches(page["margin_top"])
     bottom = inches(page["margin_bottom"])
@@ -363,7 +365,7 @@ def build_pdf(data: dict[str, Any], output: Path) -> None:
         subject=str(data.get("subject", "")),
         keywords=pdf_keywords(data.get("keywords")),
     )
-    doc._start_page = start_page
+    doc._start_page = logical_start_page
 
     odd_frame = Frame(
         odd_left, bottom, usable_width, usable_height,
@@ -380,7 +382,7 @@ def build_pdf(data: dict[str, Any], output: Path) -> None:
 
     def draw_page_header(canvas, doc_obj):
         pdf_page_number = canvas.getPageNumber()
-        logical_page_number = start_page + pdf_page_number - 1
+        logical_page_number = logical_start_page + pdf_page_number - 1
 
         canvas.saveState()
 
@@ -391,9 +393,10 @@ def build_pdf(data: dict[str, Any], output: Path) -> None:
             header_y = size[1] - top + inches(st["header_offset"])
             canvas.drawCentredString(size[0] / 2.0, header_y, document_title)
 
-        # Page number, centered in the bottom margin.
-        canvas.setFont(st["font"], 9.0)
-        canvas.drawCentredString(size[0] / 2.0, bottom / 2.0, str(logical_page_number))
+        # Page number, centered in the bottom margin, only when requested.
+        if start_page is not None:
+            canvas.setFont(st["font"], 9.0)
+            canvas.drawCentredString(size[0] / 2.0, bottom / 2.0, str(logical_page_number))
 
         canvas.restoreState()
 
@@ -515,9 +518,18 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("input", type=Path, help="YAML or JSON definition")
     ap.add_argument("output", type=Path, help="Output PDF")
+    ap.add_argument(
+        "--start-page",
+        nargs="?",
+        type=int,
+        const=1,
+        default=None,
+        metavar="N",
+        help="Add page numbers starting at N; if N is omitted, start at 1.",
+    )
     args = ap.parse_args()
     data = load_data(args.input)
-    build_pdf(data, args.output)
+    build_pdf(data, args.output, args.start_page)
 
 
 if __name__ == "__main__":

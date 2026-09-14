@@ -116,13 +116,13 @@ def normalize_keywords(value: Any) -> str:
     return str(value)
 
 
-def draw_daily_page(data: dict[str, Any], output: Path) -> None:
+def draw_daily_page(data: dict[str, Any], output: Path, start_page: int | None = None) -> None:
     cfg = deep_merge(DEFAULTS, data.get("config", {}))
     page = cfg["page"]
     style = cfg["style"]
-    start_page = int(cfg.get("start_page", 1))
-    if start_page < 1:
-        raise SystemExit("start_page must be at least 1.")
+    if start_page is not None and start_page < 1:
+        raise SystemExit("--start-page must be at least 1.")
+    logical_start_page = start_page if start_page is not None else 1
     page_width, page_height = resolve_page_size(cfg)
 
     top = float(page["margin_top"]) * inch
@@ -162,7 +162,7 @@ def draw_daily_page(data: dict[str, Any], output: Path) -> None:
     # margins follow the logical page numbers, so a document starting on an
     # even page gets the correct binding edge.
     for page_index in range(2):
-        page_number = start_page + page_index
+        page_number = logical_start_page + page_index
         if mirrored:
             inside = float(page["margin_inside"]) * inch
             outside = float(page["margin_outside"]) * inch
@@ -217,12 +217,13 @@ def draw_daily_page(data: dict[str, Any], output: Path) -> None:
                     c.setLineWidth(line_width)
                 c.line(left, y, page_width - right, y)
 
-        # Page number, centered in the bottom margin.
-        c.saveState()
-        c.setFillColor(colors.black)
-        c.setFont(style["font"], 9.0)
-        c.drawCentredString(page_width / 2.0, bottom / 2.0, str(page_number))
-        c.restoreState()
+        # Page number, centered in the bottom margin, only when requested.
+        if start_page is not None:
+            c.saveState()
+            c.setFillColor(colors.black)
+            c.setFont(style["font"], 9.0)
+            c.drawCentredString(page_width / 2.0, bottom / 2.0, str(page_number))
+            c.restoreState()
 
         c.showPage()
 
@@ -233,8 +234,12 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("input", type=Path, help="YAML or JSON definition")
     ap.add_argument("output", type=Path, help="Output PDF")
+    ap.add_argument(
+        "--start-page", nargs="?", type=int, const=1, default=None, metavar="N",
+        help="Add page numbers starting at N; if N is omitted, start at 1.",
+    )
     args = ap.parse_args()
-    draw_daily_page(load_data(args.input), args.output)
+    draw_daily_page(load_data(args.input), args.output, args.start_page)
 
 
 if __name__ == "__main__":

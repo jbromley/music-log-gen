@@ -109,14 +109,19 @@ def main():
     ap.add_argument("output", type=Path)
     ap.add_argument("--start-date")
     ap.add_argument("--topics", nargs="+")
+    ap.add_argument(
+        "--start-page", nargs="?", type=int, const=1, default=None, metavar="N",
+        help="Add page numbers starting at N; if N is omitted, start at 1.",
+    )
     args = ap.parse_args()
 
     data = load_data(args.input)
     cfg = deep_merge(DEFAULTS, data.get("config", {}))
     page, st = cfg["page"], cfg["style"]
-    start_page = int(cfg.get("start_page", 1))
-    if start_page < 1:
-        raise SystemExit("start_page must be at least 1.")
+    start_page = args.start_page
+    if start_page is not None and start_page < 1:
+        raise SystemExit("--start-page must be at least 1.")
+    logical_start_page = start_page if start_page is not None else 1
 
     sv = args.start_date if args.start_date is not None else data.get("start_date")
     if sv is None: raise SystemExit("start_date is required")
@@ -150,7 +155,7 @@ def main():
     date_offset = 0
 
     for page_index in range(2):
-        page_number = start_page + page_index
+        page_number = logical_start_page + page_index
         if mirrored:
             inside = float(page["margin_inside"])*inch
             outside = float(page["margin_outside"])*inch
@@ -222,12 +227,13 @@ def main():
 
         date_offset += nrows
 
-        # Page number, centered in the bottom margin.
-        c.saveState()
-        c.setFillColor(colors.black)
-        c.setFont(st["font"], 9.0)
-        c.drawCentredString(pw / 2.0, bottom / 2.0, str(page_number))
-        c.restoreState()
+        # Page number, centered in the bottom margin, only when requested.
+        if start_page is not None:
+            c.saveState()
+            c.setFillColor(colors.black)
+            c.setFont(st["font"], 9.0)
+            c.drawCentredString(pw / 2.0, bottom / 2.0, str(page_number))
+            c.restoreState()
 
         c.showPage()
 
