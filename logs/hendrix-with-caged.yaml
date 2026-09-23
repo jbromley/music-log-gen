@@ -1,0 +1,106 @@
+document_title: Play Like Hendrix with CAGED in 7 Days
+author: J. Bromley
+subject: guitar practice log
+keywords:
+  - guitar
+  - practice
+  - pickup music
+  - online classes
+
+config:
+  paper_size: b5
+  page:
+    orientation: portrait
+    mirrored_margins: true
+    margin_inside: 0.5
+    margin_outside: 0.25
+    margin_top: 0.5
+    margin_bottom: 0.5
+
+  style:
+    document_title_font: Helvetica-Bold
+    document_title_size: 14
+    document_title_gap: 0.20
+    header_font: Helvetica
+    header_size: 10
+    header_offset: 0.12
+    title_size: 12
+    table_font_size: 10
+    row_height: 0.25
+    header_height: 0.30
+    exercise_col_fraction: 0.15
+    line_width: 0.5
+    outer_line_width: 1.0
+    title_gap: 0.08
+    unit_gap: 0.16
+
+  table:
+    exercise_header: Exercise
+    sessions: 6
+    session_headers: ["", "", "", "", "", "", ""]
+
+units:
+  - title: Day 1 - E shape
+    exercises:
+      - Lesson
+      - Add 9 toggle
+      - Add 6 toggle
+      - Sus 4 toggle
+      - Jam
+
+  - title: Day 2 - A shape
+    exercises:
+      - Lesson
+      - slide up
+      - sus
+      - dbl, trpl stops
+      - Jam
+
+  - title: Day 3 - G shape
+    exercises:
+      - Lesson
+      - chrom hammer
+      - dbl stops
+      - circle 3rd
+      - Jam
+
+  - title: Day 4 - C shape
+    exercises:
+      - Lesson
+      - Maj 7 dbl stops
+      - 4th slides
+      - Maj 9 PO
+      - Jam
+
+  - title: Day 5 - D shape
+    exercises:
+      - Lesson
+      - slide up
+      - hammer-ons
+      - Sus9 riffs
+      - Jam
+
+  - title: Day 6 - Minor CAGED moves
+    exercises:
+      - Lesson
+      - R&B pinky
+      - R&B pinky 2
+      - Min 9 crunch
+      - Jam
+
+  - title: Day 7 - Iconic outliers
+    exercises:
+      - Lesson
+      - Hendrix chord
+      - Add 9 no 3rd
+      - E D C conn
+
+  - title: Hendrex CAGED Performance
+    repeats: 2
+    exercises:
+      - 1
+      - 3
+      - 9
+      - 19
+      - 27
+      - 29
