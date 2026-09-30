@@ -34,21 +34,6 @@ config:
     session_headers: ["", "", "", "", "", "", ""]
 
 units:
-  - title: La Candeur
-    repeats: 1
-    exercises:
-      - 1
-      - 9
-      - 13
-      - 17
-      - 21
-
-  - title: Musette (Couppey)
-    repeats: 1
-    exercises:
-      - 1
-      - 9
-
   - title: The Entertainer (p 142)
     repeats: 1
     exercises:
