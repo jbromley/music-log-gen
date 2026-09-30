@@ -214,6 +214,14 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
             f'Unit "{unit.get("title", "")}" has repeats={repeats}; repeats must be at least 1.'
         )
 
+    # Accept both repeats_each (matching the other config keys) and repeats-each.
+    repeats_each = int(unit.get("repeats_each", unit.get("repeats-each", 1)))
+    if repeats_each < 1:
+        raise ValueError(
+            f'Unit "{unit.get("title", "")}" has repeats_each={repeats_each}; '
+            "repeats_each must be at least 1."
+        )
+
     exercises = list(unit.get("exercises", []))
     exercise_rows = []
     for ex in exercises:
@@ -221,7 +229,10 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
             name = str(ex.get("name", ""))
         else:
             name = str(ex)
-        exercise_rows.append([name] + [""] * sessions)
+        # repeats_each lists each exercise that many times in a row before
+        # moving on to the next exercise.
+        for _ in range(repeats_each):
+            exercise_rows.append([name] + [""] * sessions)
 
     data = [[exercise_header, *session_headers]]
     for _ in range(repeats):
@@ -261,6 +272,15 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
         ("GRID", (0, 0), (-1, -1), line_width, colors.black),
         ("BOX", (0, 0), (-1, -1), outer_line_width, colors.black),
     ]
+
+    # With repeats_each, mark the end of each exercise's group of rows with a
+    # slightly heavier rule.  Repetition boundaries below draw over these.
+    if repeats_each > 1 and exercise_rows:
+        for group_end in range(repeats_each, len(data) - 1, repeats_each):
+            style_commands.append(
+                ("LINEBELOW", (0, group_end), (-1, group_end),
+                 outer_line_width, colors.black)
+            )
 
     # A repeated exercise list is rendered as one continuous table.  Mark the
     # end of each repetition except the last with a heavier horizontal rule.
