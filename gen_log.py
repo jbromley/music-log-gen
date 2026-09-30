@@ -160,6 +160,12 @@ def inches(value: Any) -> float:
     return float(value) * inch
 
 
+def unit_title(unit: dict[str, Any]) -> str:
+    """Return the unit's title, or "" when it is missing or null."""
+    title = unit.get("title")
+    return "" if title is None else str(title).strip()
+
+
 
 class ContinuedTable(Table):
     """A Table that inserts '<unit title> (continued)' before continuation fragments."""
@@ -183,16 +189,19 @@ class ContinuedTable(Table):
 
     def split(self, availWidth, availHeight):
         parts = super().split(availWidth, availHeight)
-        if len(parts) <= 1 or not self._continuation_title:
+        if len(parts) <= 1 or self._continuation_style is None:
             return parts
 
         # Put the continuation heading immediately before the second fragment.
         # keepWithNext prevents the heading from being stranded at the bottom
         # of a page without at least part of the continued table following it.
-        heading = Paragraph(
-            f"{self._continuation_title} (continued)",
-            self._continuation_style,
+        # An untitled unit gets a bare "(continued)".
+        text = (
+            f"{self._continuation_title} (continued)"
+            if self._continuation_title
+            else "(continued)"
         )
+        heading = Paragraph(text, self._continuation_style)
         return [parts[0], heading, *parts[1:]]
 
 def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, continuation_style: ParagraphStyle) -> Table:
@@ -211,14 +220,14 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
     repeats = int(unit.get("repeats", 1))
     if repeats < 1:
         raise ValueError(
-            f'Unit "{unit.get("title", "")}" has repeats={repeats}; repeats must be at least 1.'
+            f'Unit "{unit_title(unit)}" has repeats={repeats}; repeats must be at least 1.'
         )
 
     # Accept both repeats_each (matching the other config keys) and repeats-each.
     repeats_each = int(unit.get("repeats_each", unit.get("repeats-each", 1)))
     if repeats_each < 1:
         raise ValueError(
-            f'Unit "{unit.get("title", "")}" has repeats_each={repeats_each}; '
+            f'Unit "{unit_title(unit)}" has repeats_each={repeats_each}; '
             "repeats_each must be at least 1."
         )
 
@@ -248,7 +257,7 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
 
     table = ContinuedTable(
         data,
-        continuation_title=str(unit.get("title", "")),
+        continuation_title=unit_title(unit),
         continuation_style=continuation_style,
         colWidths=col_widths,
         rowHeights=row_heights,
@@ -490,9 +499,15 @@ def build_pdf(data: dict[str, Any], output: Path, start_page: int | None = None)
     ]
 
     for i, unit in enumerate(data.get("units", [])):
-        title = Paragraph(str(unit.get("title", f"Unit {i + 1}")), title_style)
         table = make_table(unit, cfg, usable_width, continued_title_style)
-        block = [title, Spacer(1, inches(st["title_gap"])), table]
+        title_text = unit_title(unit)
+        if title_text:
+            title = Paragraph(title_text, title_style)
+            block = [title, Spacer(1, inches(st["title_gap"])), table]
+        else:
+            # Untitled unit: print the table alone, with no heading or gap.
+            title = None
+            block = [table]
 
         # Measure the complete unit before placing it.  KeepTogether is not used
         # here: with maxHeight set it may unwrap the contents when the remaining
@@ -503,9 +518,13 @@ def build_pdf(data: dict[str, Any], output: Path, start_page: int | None = None)
         #     space before starting it;
         #   * if the unit is taller than a whole page, do not force a break, so
         #     the Table can split naturally by rows.
-        _title_w, title_h = title.wrap(usable_width, usable_height)
+        if title is not None:
+            _title_w, title_h = title.wrap(usable_width, usable_height)
+            title_h += inches(st["title_gap"])
+        else:
+            title_h = 0.0
         _table_w, table_h = table.wrap(usable_width, usable_height)
-        unit_height = title_h + inches(st["title_gap"]) + table_h
+        unit_height = title_h + table_h
 
         if unit_height <= usable_height:
             # The whole unit fits on one fresh page, so require enough room for
@@ -522,9 +541,7 @@ def build_pdf(data: dict[str, Any], output: Path, start_page: int | None = None)
                 inches(st["header_height"])
                 + minimum_start_rows * inches(st["row_height"]),
             )
-            required_start_height = (
-                title_h + inches(st["title_gap"]) + table_start_height
-            )
+            required_start_height = title_h + table_start_height
 
         story.append(CondPageBreak(required_start_height))
         story.extend(block)
