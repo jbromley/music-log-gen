@@ -34,15 +34,8 @@ config:
     session_headers: ["", "", "", "", "", "", ""]
 
 units:
-  - title: Scales
-    repeats: 2
-    exercises:
-      - C Major
-      - G Major
-      - D Major
-
   - title: Chapter 15 - The G Major Scale
-    repeats: 2
+    repeats: 3
     exercises:
       - Warm-ups
       - G Major scale
@@ -51,7 +44,7 @@ units:
       - Bells
 
   - title: Chapter 16 - Primary Chords in G Major
-    repeats: 2
+    repeats: 3
     exercises:
       - D7 Chord
       - Alexander March
@@ -62,12 +55,3 @@ units:
       - Jolly Good Fellow
       - Banuwa
       - Music Box Etude
-
-  - title: The Carnival of Venice
-    repeats: 2
-    exercises:
-      - 1
-      - 5
-      - 13
-      - 21
-      - 29
