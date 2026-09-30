@@ -16,7 +16,7 @@ This is the behavior that Google Sheets does not express cleanly with custom pag
 ## Run
 
 ```bash
-python practice_log_generator.py practice_logs.yaml practice_logs.pdf
+python gen_log.py practice_logs.yaml practice_logs.pdf
 ```
 
 Dependencies:
@@ -54,6 +54,47 @@ You can also put labels in the session columns:
 
 ```yaml
 session_headers: ["1", "2", "3", "4", "5", "6", "7"]
+```
+
+### Repeating exercises
+
+A unit can list its exercises more than once without repeating them in the
+YAML. Both options default to `1` and must be at least `1`.
+
+`repeats` prints the whole exercise list the given number of times:
+
+```yaml
+- title: Groove Drills
+  repeats: 2
+  exercises: [Exercise 1, Exercise 2, Exercise 3]
+  # Rows: 1, 2, 3, 1, 2, 3
+```
+
+A heavier rule (`config.style.repeat_line_width`) marks the end of each
+pass through the list.
+
+`repeats_each` (or `repeats-each`) prints each exercise the given number of
+times in a row before moving to the next one:
+
+```yaml
+- title: Scale Drills
+  repeats_each: 2
+  exercises: [Exercise 1, Exercise 2, Exercise 3]
+  # Rows: 1, 1, 2, 2, 3, 3
+```
+
+A slightly heavier rule (`config.style.outer_line_width`) separates each
+exercise's group of rows.
+
+The two options can be combined. `repeats_each` is applied first, then the
+resulting list is repeated:
+
+```yaml
+- title: Combined
+  repeats: 2
+  repeats_each: 3
+  exercises: [A, B]
+  # Rows: A, A, A, B, B, B, A, A, A, B, B, B
 ```
 
 ## Appearance controls
