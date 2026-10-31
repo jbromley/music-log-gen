@@ -35,7 +35,7 @@ config:
 
 units:
   - title:
-    repeats_each: 3
+    repeats_each: 6
     exercises:
       - 1
       - 2
