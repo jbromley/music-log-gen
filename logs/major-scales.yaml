@@ -1,0 +1,52 @@
+document_title: Major Scales
+author: J. Bromley
+subject: major scales
+keywords:
+  - piano
+  - practice
+
+config:
+  paper_size: b5
+
+  page:
+    orientation: portrait
+    mirrored_margins: true
+    margin_inside: 0.5
+    margin_outside: 0.25
+    margin_left: 0.75
+    margin_right: 0.5
+    margin_top: 0.5
+    margin_bottom: 0.5
+
+  style:
+    title_size: 12
+    table_font_size: 10
+    row_height: 0.25
+    header_height: 0.30
+    exercise_col_fraction: 0.1
+    line_width: 0.75
+    outer_line_width: 1.0
+    title_gap: 0.08
+    unit_gap: 0.16
+
+  table:
+    exercise_header: Scale
+    sessions: 7
+    session_headers: ["", "", "", "", "", "", ""]
+
+units:
+  - title:
+    repeats_each: 4
+    exercises:
+      - C
+      - G
+      - D
+      - A
+      - E
+      - B
+      - G flat
+      - D flat
+      - A flat
+      - E flat
+      - B flat
+      - F
