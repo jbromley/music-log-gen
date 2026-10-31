@@ -97,6 +97,29 @@ resulting list is repeated:
   # Rows: A, A, A, B, B, B, A, A, A, B, B, B
 ```
 
+A `repeats_each` block is never split across pages.
+
+### Section rows
+
+A `section` entry adds a heading row inside the table. It is one merged cell
+the full width of the table, the same height as an exercise row, in a bold
+version of the table font:
+
+```yaml
+- title: Hanon
+  exercises:
+    - section: Left hand
+    - Exercise 1
+    - Exercise 2
+    - section: Right hand
+    - Exercise 3
+```
+
+A section row always stays on the same page as the exercise that follows it
+(the whole block when `repeats_each` is used). Section rows are printed once,
+not repeated by `repeats_each`, but they are repeated with the list by
+`repeats`. Set `config.style.section_font` to use a different font.
+
 ## Appearance controls
 
 The YAML `config.style` section controls:

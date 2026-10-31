@@ -20,6 +20,7 @@ from typing import Any
 
 from reportlab.lib import colors, pagesizes
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.fonts import ps2tt, tt2ps
 from reportlab.lib.pagesizes import landscape, portrait
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
@@ -58,7 +59,7 @@ DEFAULTS: dict[str, Any] = {
         "title_font": "Helvetica-Bold",
         "title_size": 11.0,
         "document_title_font": "Helvetica-Bold",
-        "document_title_size": 16.0,
+        "document_title_size": 12.0,
         "document_title_gap": 0.20,
         "header_font": "Helvetica",
         "header_size": 9.0,
@@ -69,10 +70,10 @@ DEFAULTS: dict[str, Any] = {
         "table_font_size": 9.0,
         "title_gap": 0.08,
         "unit_gap": 0.16,
-        "row_height": 0.31,
-        "header_height": 0.29,
+        "row_height": 0.25,
+        "header_height": 0.30,
         "exercise_col_fraction": 0.34,
-        "line_width": 0.75,
+        "line_width": 0.5,
         "outer_line_width": 1.0,
         "repeat_line_width": 1.75,
         "cell_left_padding": 5,
@@ -166,6 +167,31 @@ def unit_title(unit: dict[str, Any]) -> str:
     return "" if title is None else str(title).strip()
 
 
+def bold_font(font: str) -> str:
+    """Return the bold face of a font family, e.g. Helvetica -> Helvetica-Bold."""
+    try:
+        family, _bold, italic = ps2tt(font)
+        return tt2ps(family, 1, italic)
+    except ValueError:
+        # Not a registered family; fall back to the regular face.
+        return font
+
+
+def merge_ranges(ranges: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Merge overlapping or touching (first, last) row ranges.
+
+    ReportLab's NOSPLIT ranges must not overlap: a later overlapping range
+    clobbers an earlier one instead of combining with it.
+    """
+    merged: list[tuple[int, int]] = []
+    for first, last in sorted(ranges):
+        if merged and first <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], last))
+        else:
+            merged.append((first, last))
+    return merged
+
+
 
 class ContinuedTable(Table):
     """A Table that inserts '<unit title> (continued)' before continuation fragments."""
@@ -231,17 +257,42 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
             "repeats_each must be at least 1."
         )
 
+    # Build one pass through the exercise list.  Indices below are relative to
+    # the start of the pass (0 = first row after the table header).
     exercises = list(unit.get("exercises", []))
     exercise_rows = []
+    section_indices = []   # rows holding a "section" heading
+    groups = []            # (first, last) rows of each exercise's repeats_each block
     for ex in exercises:
+        if isinstance(ex, dict) and "section" in ex:
+            # A section heading is a single merged cell, printed once even
+            # with repeats_each.
+            section = ex.get("section")
+            section_indices.append(len(exercise_rows))
+            exercise_rows.append(["" if section is None else str(section)] + [""] * sessions)
+            continue
         if isinstance(ex, dict):
             ex = ex.get("name")
         # A blank list entry ("- ") or a null name prints an empty cell.
         name = "" if ex is None else str(ex)
         # repeats_each lists each exercise that many times in a row before
         # moving on to the next exercise.
+        first = len(exercise_rows)
         for _ in range(repeats_each):
             exercise_rows.append([name] + [""] * sessions)
+        groups.append((first, len(exercise_rows) - 1))
+
+    # Row ranges that must not be split across pages:
+    #   * a repeats_each block stays together;
+    #   * a section heading stays with the exercise block that follows it.
+    keep_together = []
+    if repeats_each > 1:
+        keep_together.extend(groups)
+    for s in section_indices:
+        following = [g for g in groups if g[0] > s]
+        if following:
+            keep_together.append((s, following[0][1]))
+    keep_together = merge_ranges(keep_together)
 
     data = [[exercise_header, *session_headers]]
     for _ in range(repeats):
@@ -282,20 +333,41 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
         ("BOX", (0, 0), (-1, -1), outer_line_width, colors.black),
     ]
 
-    # With repeats_each, mark the end of each exercise's group of rows with a
-    # slightly heavier rule.  Repetition boundaries below draw over these.
-    if repeats_each > 1 and exercise_rows:
-        for group_end in range(repeats_each, len(data) - 1, repeats_each):
+    section_font = st.get("section_font") or bold_font(st["font"])
+    rows_per_repeat = len(exercise_rows)
+    for repetition in range(repeats):
+        # Row 0 is the table header, so pass-relative row i is table row
+        # offset + i.
+        offset = 1 + repetition * rows_per_repeat
+
+        for s in section_indices:
+            row = offset + s
+            style_commands += [
+                ("SPAN", (0, row), (-1, row)),
+                ("FONTNAME", (0, row), (-1, row), section_font),
+            ]
+
+        # With repeats_each, mark the end of each exercise's group of rows
+        # with a slightly heavier rule.  Repetition boundaries below draw over
+        # these, and the table's outer box covers the last row.
+        if repeats_each > 1:
+            for _first, last in groups:
+                row = offset + last
+                if row < len(data) - 1:
+                    style_commands.append(
+                        ("LINEBELOW", (0, row), (-1, row),
+                         outer_line_width, colors.black)
+                    )
+
+        for first, last in keep_together:
             style_commands.append(
-                ("LINEBELOW", (0, group_end), (-1, group_end),
-                 outer_line_width, colors.black)
+                ("NOSPLIT", (0, offset + first), (-1, offset + last))
             )
 
     # A repeated exercise list is rendered as one continuous table.  Mark the
     # end of each repetition except the last with a heavier horizontal rule.
     if repeats > 1 and exercise_rows:
         repeat_line_width = float(st["repeat_line_width"])
-        rows_per_repeat = len(exercise_rows)
         for repetition in range(1, repeats):
             # Row 0 is the table header, so the last row of repetition N is
             # N * rows_per_repeat.
