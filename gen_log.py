@@ -235,9 +235,9 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
     exercise_rows = []
     for ex in exercises:
         if isinstance(ex, dict):
-            name = str(ex.get("name", ""))
-        else:
-            name = str(ex)
+            ex = ex.get("name")
+        # A blank list entry ("- ") or a null name prints an empty cell.
+        name = "" if ex is None else str(ex)
         # repeats_each lists each exercise that many times in a row before
         # moving on to the next exercise.
         for _ in range(repeats_each):
