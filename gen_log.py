@@ -64,7 +64,7 @@ DEFAULTS: dict[str, Any] = {
         "header_font": "Helvetica",
         "header_size": 9.0,
         "header_offset": 0.12,
-        "continued_title_font": "Helvetica-Bold",
+        "continued_title_font": "Helvetica",
         "continued_title_size": 9.0,
         "continued_title_gap": 0.08,
         "table_font_size": 9.0,
@@ -294,7 +294,14 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
             keep_together.append((s, following[0][1]))
     keep_together = merge_ranges(keep_together)
 
-    data = [[exercise_header, *session_headers]]
+    # A blank exercise_header ("exercise_header:" or "") drops the header row
+    # entirely, unless the table would otherwise be empty.
+    show_header = (
+        exercise_header is not None and str(exercise_header).strip() != ""
+    ) or not exercise_rows
+    header_rows = 1 if show_header else 0
+
+    data = [["" if exercise_header is None else exercise_header, *session_headers]] if show_header else []
     for _ in range(repeats):
         # Copy each row so ReportLab receives independent row objects.
         data.extend([list(row) for row in exercise_rows])
@@ -304,7 +311,8 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
     session_width = (usable_width - first_width) / sessions
     col_widths = [first_width] + [session_width] * sessions
 
-    row_heights = [inches(st["header_height"])] + [inches(st["row_height"])] * (len(data) - 1)
+    header_height = inches(st["header_height"]) if show_header else 0.0
+    row_heights = [header_height] * header_rows + [inches(st["row_height"])] * (len(data) - header_rows)
 
     table = ContinuedTable(
         data,
@@ -312,16 +320,17 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
         continuation_style=continuation_style,
         colWidths=col_widths,
         rowHeights=row_heights,
-        repeatRows=1 if st.get("repeat_header_on_split", True) else 0,
+        repeatRows=header_rows if st.get("repeat_header_on_split", True) else 0,
         splitByRow=1,
         hAlign="LEFT",
     )
+    # build_pdf uses this to size the minimum start of a page-spanning table.
+    table.header_height = header_height
 
     line_width = float(st["line_width"])
     outer_line_width = float(st["outer_line_width"])
     style_commands = [
         ("FONTNAME", (0, 0), (-1, -1), st["font"]),
-        ("FONTNAME", (0, 0), (-1, 0), st["title_font"]),
         ("FONTSIZE", (0, 0), (-1, -1), float(st["table_font_size"])),
         ("ALIGN", (1, 0), (-1, -1), "CENTER"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
@@ -332,13 +341,15 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
         ("GRID", (0, 0), (-1, -1), line_width, colors.black),
         ("BOX", (0, 0), (-1, -1), outer_line_width, colors.black),
     ]
+    if show_header:
+        style_commands.append(("FONTNAME", (0, 0), (-1, 0), st["title_font"]))
 
     section_font = st.get("section_font") or bold_font(st["font"])
     rows_per_repeat = len(exercise_rows)
     for repetition in range(repeats):
-        # Row 0 is the table header, so pass-relative row i is table row
-        # offset + i.
-        offset = 1 + repetition * rows_per_repeat
+        # Row 0 is the table header (when shown), so pass-relative row i is
+        # table row offset + i.
+        offset = header_rows + repetition * rows_per_repeat
 
         for s in section_indices:
             row = offset + s
@@ -369,9 +380,9 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
     if repeats > 1 and exercise_rows:
         repeat_line_width = float(st["repeat_line_width"])
         for repetition in range(1, repeats):
-            # Row 0 is the table header, so the last row of repetition N is
-            # N * rows_per_repeat.
-            boundary_row = repetition * rows_per_repeat
+            # The last row of repetition N comes after the header row(s) and
+            # N complete passes.
+            boundary_row = header_rows + repetition * rows_per_repeat - 1
             style_commands.append(
                 ("LINEBELOW", (0, boundary_row), (-1, boundary_row),
                  repeat_line_width, colors.black)
@@ -610,7 +621,7 @@ def build_pdf(data: dict[str, Any], output: Path, start_page: int | None = None)
             minimum_start_rows = 8
             table_start_height = min(
                 table_h,
-                inches(st["header_height"])
+                table.header_height
                 + minimum_start_rows * inches(st["row_height"]),
             )
             required_start_height = title_h + table_start_height

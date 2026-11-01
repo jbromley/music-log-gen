@@ -56,6 +56,13 @@ You can also put labels in the session columns:
 session_headers: ["1", "2", "3", "4", "5", "6", "7"]
 ```
 
+Leaving `exercise_header` blank (in `config.table` or on a unit) removes the
+header row entirely:
+
+```yaml
+exercise_header:
+```
+
 ### Repeating exercises
 
 A unit can list its exercises more than once without repeating them in the
