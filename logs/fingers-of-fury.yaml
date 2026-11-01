@@ -24,12 +24,13 @@ config:
     exercise_col_fraction: 0.15
 
   table:
-    exercise_header: Exercise
+    exercise_header:
     sessions: 6
     session_headers: ["", "", "", "", "", "", ""]
 
 units:
   - title:
+    repeats_each: 3
     exercises:
       - section: 1 - Left & right hand overview
       - Ex 1
