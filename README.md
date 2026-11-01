@@ -143,6 +143,27 @@ The YAML `config.style` section controls:
 
 The `config.page` section controls margins and portrait/landscape orientation.
 
+## Lined paper
+
+`gen_paper.py` creates a double-sided sheet of plain lined paper. Its only
+argument is the line spacing in millimeters:
+
+```bash
+python gen_paper.py 7
+```
+
+This writes `pdfs/lined-paper-7mm.pdf`, a two-page B5 PDF:
+
+- Page 1 is the front and page 2 is the back.
+- A 0.5" gutter for punched holes sits on the left of the front and the right
+  of the back, so the two line up when printed double-sided.
+- The other margins are 0.25", and lines run the full width between the
+  gutter and the outside margin. The first and last lines are black; the rest
+  are light gray.
+
+The page size, gutter, margins, line color and line width are constants at the
+top of the script.
+
 ## Exact visual matching
 
 The supplied Google Sheets URL could not be fetched from the current environment, so the included defaults are a clean approximation of the structure described in the conversation rather than a pixel-for-pixel transcription.
