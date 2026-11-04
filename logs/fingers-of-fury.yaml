@@ -1,3 +1,4 @@
+---
 document_title: Fingers of Fury
 author: J. Bromley
 subject: Fingers of Fury practice log
@@ -28,59 +29,75 @@ config:
     sessions: 6
     session_headers: ["", "", "", "", "", "", ""]
 
-units:
-  - title:
-    repeats_each: 3
-    exercises:
-      - section: 1 - Left & right hand overview
-      - Ex 1
-      - section: 2 - The right stuff
-      - whole
-      - half
-      - quarter
-      - 8ths
-      - 8ths triplets
-      - 16ths
-      - section: 3 - One-finger combinations
-      - Ex 1
-      - section: 4 - One-finger string crossing
-      - Ex 1
-      - section: 5 - Two-finger combinations
-      - Ex 1
-      - Ex 2
-      - Ex 3
-      - section: 6 - Three-finger combinations
-      - Ex 1
-      - section: 7 - Four-finger combinations
-      - Ex 1
-      - section: 8 - Permutating string movement
-      - Ex 1
-      - section: 9 - Right-hand ascending fifths
-      - Ex 1 (i)
-      - Ex 2 (m)
-      - section: 10 - Right-hand descending fifths
-      - Ex 1 (i)
-      - Ex 2 (m)
-      - section: 11 - Right-hand ascending octaves
-      - Ex 1 (i)
-      - Ex 2 (m)
-      - section: 12 - Right-hand descending octaves
-      - Ex 1 (i)
-      - Ex 2 (m)
-      - section: 13 - Alternating ascending octaves
-      - Ex 1 (i)
-      - Ex 2 (m)
-      - section: 14 - Alternating descending octaves
-      - Ex 1 (i)
-      - Ex 2 (m)
-      - section: 15 - Positional shifting
-      - Ex 1
-      - Ex 2
-      - Ex 3
-      - Ex 4
-      - section: 16 - Micro shifting
-      - Ex 1
-      - Ex 2
-      - section: 17 - Chromatic fretboard rotations
-      - Ex 1
-      - Ex 2
+contents:
+  repeats_each: 3
+  units:
+    - unit: "1 - Left & right hand overview"
+      exercises:
+        - 1
+    - unit: "2 - The right stuff"
+      exercises:
+        - whole
+        - half
+        - quarter
+        - 8ths
+        - 8ths triplets
+        - 16ths
+    - unit: 3 - One-finger combinations
+      exercises:
+        - 1
+    - unit: 4 - One-finger string crossing
+      exercises:
+        - 1
+    - unit: 5 - Two-finger combinations
+      exercises:
+        - 1
+        - 2
+        - 3
+    - unit: 6 - Three-finger combinations
+      exercises:
+        - 1
+    - unit: 7 - Four-finger combinations
+      exercises:
+        - 1
+    - unit: 8 - Permutating string movement
+      exercises:
+        - 1
+    - unit: 9 - Right-hand ascending fifths
+      exercises:
+        - 1 (i)
+        - 2 (m)
+    - unit: 10 - Right-hand descending fifths
+      exercises:
+        - 1 (i)
+        - 2 (m)
+    - unit: 11 - Right-hand ascending octaves
+      exercises:
+        - 1 (i)
+        - 2 (m)
+    - unit: 12 - Right-hand descending octaves
+      exercises:
+        - 1 (i)
+        - 2 (m)
+    - unit: 13 - Alternating ascending octaves
+      exercises:
+        - 1 (i)
+        - 2 (m)
+    - unit: 14 - Alternating descending octaves
+      exercises:
+        - 1 (i)
+        - 2 (m)
+    - unit: 15 - Positional shifting
+      exercises:
+        - 1
+        - 2
+        - 3
+        - 4
+    - unit: 16 - Micro shifting
+      exercises:
+        - 1
+        - 2
+    - unit: 17 - Chromatic fretboard rotations
+      exercises:
+        - 1
+        - 2
