@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Generate printable music-practice log sheets as a PDF.
 
-Input: YAML or JSON.  Each unit has a title and a list of exercises.
-Pagination rule:
-  * keep a complete unit together when it fits on one page;
-  * if it won't fit in the remaining space, move it to the next page;
-  * split only units that are themselves taller than one usable page.
+Input: YAML or JSON.  The "contents" map lists units, each with a title and a
+list of exercises.  The whole document is printed as one table: each unit's
+title and any "section" labels are merged rows inside it.
+Pagination rule: the table splits across pages by rows, but
+  * a repeats_each block is never split;
+  * a unit title or section row stays on the same page as the exercises
+    that follow it.
 
 Usage:
     python gen_log.py practice_logs.yaml practice_logs.pdf
@@ -26,7 +28,6 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import (
     BaseDocTemplate,
-    CondPageBreak,
     Frame,
     PageTemplate,
     Paragraph,
@@ -56,8 +57,6 @@ DEFAULTS: dict[str, Any] = {
     },
     "style": {
         "font": "Helvetica",
-        "title_font": "Helvetica-Bold",
-        "title_size": 11.0,
         "document_title_font": "Helvetica-Bold",
         "document_title_size": 12.0,
         "document_title_gap": 0.20,
@@ -68,10 +67,7 @@ DEFAULTS: dict[str, Any] = {
         "continued_title_size": 9.0,
         "continued_title_gap": 0.08,
         "table_font_size": 9.0,
-        "title_gap": 0.08,
-        "unit_gap": 0.16,
         "row_height": 0.25,
-        "header_height": 0.30,
         "exercise_col_fraction": 0.34,
         "line_width": 0.5,
         "outer_line_width": 1.0,
@@ -80,11 +76,8 @@ DEFAULTS: dict[str, Any] = {
         "cell_right_padding": 4,
         "cell_top_padding": 2,
         "cell_bottom_padding": 2,
-        "repeat_header_on_split": True,
     },
     "table": {
-        "exercise_header": "Exercise",
-        "session_headers": [],
         "sessions": 7,
     },
 }
@@ -161,19 +154,26 @@ def inches(value: Any) -> float:
     return float(value) * inch
 
 
-def unit_title(unit: dict[str, Any]) -> str:
-    """Return the unit's title, or "" when it is missing or null."""
-    title = unit.get("title")
-    return "" if title is None else str(title).strip()
+def positive_int(mapping: dict[str, Any], key: str, default: int, where: str) -> int:
+    """Read a count such as repeats_each (or repeats-each) that must be >= 1."""
+    value = int(mapping.get(key, mapping.get(key.replace("_", "-"), default)))
+    if value < 1:
+        raise SystemExit(f"{where} has {key}={value}; {key} must be at least 1.")
+    return value
 
 
-def bold_font(font: str) -> str:
-    """Return the bold face of a font family, e.g. Helvetica -> Helvetica-Bold."""
+def text_of(value: Any) -> str:
+    """Cell text for a YAML value; a missing or null value prints nothing."""
+    return "" if value is None else str(value).strip()
+
+
+def font_variant(font: str, bold: int, italic: int) -> str:
+    """Return a face of a font's family, e.g. (Helvetica, 0, 1) -> Helvetica-Oblique."""
     try:
-        family, _bold, italic = ps2tt(font)
-        return tt2ps(family, 1, italic)
+        family, _bold, _italic = ps2tt(font)
+        return tt2ps(family, bold, italic)
     except ValueError:
-        # Not a registered family; fall back to the regular face.
+        # Not a registered family; fall back to the font as given.
         return font
 
 
@@ -192,25 +192,16 @@ def merge_ranges(ranges: list[tuple[int, int]]) -> list[tuple[int, int]]:
     return merged
 
 
-
 class ContinuedTable(Table):
-    """A Table that inserts '<unit title> (continued)' before continuation fragments."""
+    """A Table that inserts "(continued)" before each continuation fragment."""
 
-    def __init__(
-        self,
-        *args,
-        continuation_title: str | None = None,
-        continuation_style: ParagraphStyle | None = None,
-        **kwargs,
-    ):
+    def __init__(self, *args, continuation_style: ParagraphStyle | None = None, **kwargs):
         super().__init__(*args, **kwargs)
-        self._continuation_title = continuation_title
         self._continuation_style = continuation_style
 
     def onSplit(self, table, byRow=1):
         # ReportLab creates split fragments using self.__class__, so copy our
-        # continuation metadata onto each fragment for splits spanning 3+ pages.
-        table._continuation_title = getattr(self, "_continuation_title", None)
+        # continuation style onto each fragment for splits spanning 3+ pages.
         table._continuation_style = getattr(self, "_continuation_style", None)
 
     def split(self, availWidth, availHeight):
@@ -221,114 +212,134 @@ class ContinuedTable(Table):
         # Put the continuation heading immediately before the second fragment.
         # keepWithNext prevents the heading from being stranded at the bottom
         # of a page without at least part of the continued table following it.
-        # An untitled unit gets a bare "(continued)".
-        text = (
-            f"{self._continuation_title} (continued)"
-            if self._continuation_title
-            else "(continued)"
-        )
-        heading = Paragraph(text, self._continuation_style)
+        heading = Paragraph("(continued)", self._continuation_style)
         return [parts[0], heading, *parts[1:]]
 
-def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, continuation_style: ParagraphStyle) -> Table:
+
+class TableRows:
+    """Collects the table's rows and the row indices that need styling."""
+
+    def __init__(self, sessions: int):
+        self.sessions = sessions
+        self.rows: list[list[str]] = []
+        self.headings: list[tuple[int, str]] = []      # (row, font)
+        self.groups: list[tuple[int, int, bool]] = []  # (first, last, ruled)
+        self.boundaries: list[int] = []                # rows ending a repeat
+
+    def heading(self, text: str, font: str) -> None:
+        self.headings.append((len(self.rows), font))
+        self.rows.append([text] + [""] * self.sessions)
+
+    def exercise(self, name: str, count: int) -> None:
+        # repeats_each lists the exercise that many times in a row; the block
+        # gets a slightly heavier rule after it when count > 1.
+        first = len(self.rows)
+        for _ in range(count):
+            self.rows.append([name] + [""] * self.sessions)
+        self.groups.append((first, len(self.rows) - 1, count > 1))
+
+    def boundary(self) -> None:
+        if self.rows:
+            self.boundaries.append(len(self.rows) - 1)
+
+    def keep_together(self) -> list[tuple[int, int]]:
+        """Row ranges that must not be split across pages.
+
+        * a repeats_each block stays together;
+        * a heading stays with the exercise block that follows it (so a unit
+          title followed by a section stays with both).
+        """
+        ranges = [(first, last) for first, last, ruled in self.groups if ruled]
+        for row, _font in self.headings:
+            following = [g for g in self.groups if g[0] > row]
+            if following:
+                ranges.append((row, following[0][1]))
+        return merge_ranges(ranges)
+
+
+def collect_rows(contents: dict[str, Any], sessions: int, unit_font: str, section_font: str) -> TableRows:
+    """Lay out the contents as table rows.
+
+        contents:
+          repeats: 1          # whole list
+          repeats_each: 3     # default for every unit
+          units:
+            - unit: Day 1     # bold heading row
+              repeats: 2      # this unit's exercise list
+              repeats_each: 1 # overrides the contents default
+              exercises:
+                - Lesson
+                - section: Toggles   # italic heading row
+                - Add 9 toggle
+            - section: Bonus         # a section between units
+    """
+    out = TableRows(sessions)
+    repeats = positive_int(contents, "repeats", 1, "contents")
+    default_each = positive_int(contents, "repeats_each", 1, "contents")
+    units = contents.get("units") or []
+
+    for repetition in range(repeats):
+        for unit in units:
+            if not isinstance(unit, dict):
+                raise SystemExit(f"contents.units entries must be maps, got {unit!r}.")
+            if "section" in unit and "unit" not in unit:
+                out.heading(text_of(unit["section"]), section_font)
+                continue
+
+            title = text_of(unit.get("unit"))
+            if title:
+                # An untitled unit gets no heading row.
+                out.heading(title, unit_font)
+            where = f'Unit "{title}"'
+            unit_repeats = positive_int(unit, "repeats", 1, where)
+            each = positive_int(unit, "repeats_each", default_each, where)
+
+            for pass_number in range(unit_repeats):
+                for ex in unit.get("exercises") or []:
+                    if isinstance(ex, dict) and "section" in ex:
+                        # Sections print once, not repeated by repeats_each.
+                        out.heading(text_of(ex["section"]), section_font)
+                        continue
+                    if isinstance(ex, dict):
+                        ex = ex.get("name")
+                    out.exercise(text_of(ex), each)
+                if pass_number < unit_repeats - 1:
+                    out.boundary()
+
+        if repetition < repeats - 1:
+            out.boundary()
+
+    return out
+
+
+def make_table(contents: dict[str, Any], cfg: dict[str, Any], usable_width: float,
+               continuation_style: ParagraphStyle) -> Table | None:
     st = cfg["style"]
-    tc = cfg["table"]
+    sessions = int(contents.get("sessions", cfg["table"].get("sessions", 7)))
 
-    sessions = int(unit.get("sessions", tc.get("sessions", 7)))
-    session_headers = unit.get("session_headers", tc.get("session_headers", [])) or []
-    if len(session_headers) < sessions:
-        session_headers = list(session_headers) + [""] * (sessions - len(session_headers))
-    else:
-        session_headers = list(session_headers[:sessions])
+    # Heading rows are single merged cells at the table font size: unit
+    # titles in bold, sections in italics.
+    unit_font = st.get("unit_font") or font_variant(st["font"], 1, 0)
+    section_font = st.get("section_font") or font_variant(st["font"], 0, 1)
+    layout = collect_rows(contents, sessions, unit_font, section_font)
+    if not layout.rows:
+        return None
+    last_row = len(layout.rows) - 1
 
-    exercise_header = unit.get("exercise_header", tc.get("exercise_header", "Exercise"))
-
-    repeats = int(unit.get("repeats", 1))
-    if repeats < 1:
-        raise ValueError(
-            f'Unit "{unit_title(unit)}" has repeats={repeats}; repeats must be at least 1.'
-        )
-
-    # Accept both repeats_each (matching the other config keys) and repeats-each.
-    repeats_each = int(unit.get("repeats_each", unit.get("repeats-each", 1)))
-    if repeats_each < 1:
-        raise ValueError(
-            f'Unit "{unit_title(unit)}" has repeats_each={repeats_each}; '
-            "repeats_each must be at least 1."
-        )
-
-    # Build one pass through the exercise list.  Indices below are relative to
-    # the start of the pass (0 = first row after the table header).
-    exercises = list(unit.get("exercises", []))
-    exercise_rows = []
-    section_indices = []   # rows holding a "section" heading
-    groups = []            # (first, last) rows of each exercise's repeats_each block
-    for ex in exercises:
-        if isinstance(ex, dict) and "section" in ex:
-            # A section heading is a single merged cell, printed once even
-            # with repeats_each.
-            section = ex.get("section")
-            section_indices.append(len(exercise_rows))
-            exercise_rows.append(["" if section is None else str(section)] + [""] * sessions)
-            continue
-        if isinstance(ex, dict):
-            ex = ex.get("name")
-        # A blank list entry ("- ") or a null name prints an empty cell.
-        name = "" if ex is None else str(ex)
-        # repeats_each lists each exercise that many times in a row before
-        # moving on to the next exercise.
-        first = len(exercise_rows)
-        for _ in range(repeats_each):
-            exercise_rows.append([name] + [""] * sessions)
-        groups.append((first, len(exercise_rows) - 1))
-
-    # Row ranges that must not be split across pages:
-    #   * a repeats_each block stays together;
-    #   * a section heading stays with the exercise block that follows it.
-    keep_together = []
-    if repeats_each > 1:
-        keep_together.extend(groups)
-    for s in section_indices:
-        following = [g for g in groups if g[0] > s]
-        if following:
-            keep_together.append((s, following[0][1]))
-    keep_together = merge_ranges(keep_together)
-
-    # A blank exercise_header ("exercise_header:" or "") drops the header row
-    # entirely, unless the table would otherwise be empty.
-    show_header = (
-        exercise_header is not None and str(exercise_header).strip() != ""
-    ) or not exercise_rows
-    header_rows = 1 if show_header else 0
-
-    data = [["" if exercise_header is None else exercise_header, *session_headers]] if show_header else []
-    for _ in range(repeats):
-        # Copy each row so ReportLab receives independent row objects.
-        data.extend([list(row) for row in exercise_rows])
-
-    first_fraction = float(st.get("exercise_col_fraction", 0.34))
-    first_width = usable_width * first_fraction
+    first_width = usable_width * float(st.get("exercise_col_fraction", 0.34))
     session_width = (usable_width - first_width) / sessions
-    col_widths = [first_width] + [session_width] * sessions
-
-    header_height = inches(st["header_height"]) if show_header else 0.0
-    row_heights = [header_height] * header_rows + [inches(st["row_height"])] * (len(data) - header_rows)
-
     table = ContinuedTable(
-        data,
-        continuation_title=unit_title(unit),
+        layout.rows,
         continuation_style=continuation_style,
-        colWidths=col_widths,
-        rowHeights=row_heights,
-        repeatRows=header_rows if st.get("repeat_header_on_split", True) else 0,
+        colWidths=[first_width] + [session_width] * sessions,
+        rowHeights=[inches(st["row_height"])] * len(layout.rows),
         splitByRow=1,
         hAlign="LEFT",
     )
-    # build_pdf uses this to size the minimum start of a page-spanning table.
-    table.header_height = header_height
 
     line_width = float(st["line_width"])
     outer_line_width = float(st["outer_line_width"])
+    repeat_line_width = float(st["repeat_line_width"])
     style_commands = [
         ("FONTNAME", (0, 0), (-1, -1), st["font"]),
         ("FONTSIZE", (0, 0), (-1, -1), float(st["table_font_size"])),
@@ -341,57 +352,32 @@ def make_table(unit: dict[str, Any], cfg: dict[str, Any], usable_width: float, c
         ("GRID", (0, 0), (-1, -1), line_width, colors.black),
         ("BOX", (0, 0), (-1, -1), outer_line_width, colors.black),
     ]
-    if show_header:
-        style_commands.append(("FONTNAME", (0, 0), (-1, 0), st["title_font"]))
 
-    section_font = st.get("section_font") or bold_font(st["font"])
-    rows_per_repeat = len(exercise_rows)
-    for repetition in range(repeats):
-        # Row 0 is the table header (when shown), so pass-relative row i is
-        # table row offset + i.
-        offset = header_rows + repetition * rows_per_repeat
+    for row, font in layout.headings:
+        style_commands += [
+            ("SPAN", (0, row), (-1, row)),
+            ("FONTNAME", (0, row), (-1, row), font),
+        ]
 
-        for s in section_indices:
-            row = offset + s
-            style_commands += [
-                ("SPAN", (0, row), (-1, row)),
-                ("FONTNAME", (0, row), (-1, row), section_font),
-            ]
-
-        # With repeats_each, mark the end of each exercise's group of rows
-        # with a slightly heavier rule.  Repetition boundaries below draw over
-        # these, and the table's outer box covers the last row.
-        if repeats_each > 1:
-            for _first, last in groups:
-                row = offset + last
-                if row < len(data) - 1:
-                    style_commands.append(
-                        ("LINEBELOW", (0, row), (-1, row),
-                         outer_line_width, colors.black)
-                    )
-
-        for first, last in keep_together:
+    # A slightly heavier rule after each repeats_each block, then a heavier
+    # one at the end of each repeat, drawn over it.  The table's outer box
+    # covers the last row.
+    for _first, last, ruled in layout.groups:
+        if ruled and last < last_row:
             style_commands.append(
-                ("NOSPLIT", (0, offset + first), (-1, offset + last))
+                ("LINEBELOW", (0, last), (-1, last), outer_line_width, colors.black)
+            )
+    for row in layout.boundaries:
+        if row < last_row:
+            style_commands.append(
+                ("LINEBELOW", (0, row), (-1, row), repeat_line_width, colors.black)
             )
 
-    # A repeated exercise list is rendered as one continuous table.  Mark the
-    # end of each repetition except the last with a heavier horizontal rule.
-    if repeats > 1 and exercise_rows:
-        repeat_line_width = float(st["repeat_line_width"])
-        for repetition in range(1, repeats):
-            # The last row of repetition N comes after the header row(s) and
-            # N complete passes.
-            boundary_row = header_rows + repetition * rows_per_repeat - 1
-            style_commands.append(
-                ("LINEBELOW", (0, boundary_row), (-1, boundary_row),
-                 repeat_line_width, colors.black)
-            )
+    for first, last in layout.keep_together():
+        style_commands.append(("NOSPLIT", (0, first), (-1, last)))
 
     table.setStyle(TableStyle(style_commands))
     return table
-
-
 
 
 class MirroredDocTemplate(BaseDocTemplate):
@@ -565,71 +551,20 @@ def build_pdf(data: dict[str, Any], output: Path, start_page: int | None = None)
         keepWithNext=1,
     )
 
-    title_style = ParagraphStyle(
-        "UnitTitle",
-        parent=getSampleStyleSheet()["Normal"],
-        fontName=st["title_font"],
-        fontSize=float(st["title_size"]),
-        leading=float(st["title_size"]) * 1.1,
-        alignment=TA_LEFT,
-        spaceBefore=0,
-        spaceAfter=0,
-    )
-
     story = [
         Paragraph(document_title, document_title_style),
         Spacer(1, inches(st["document_title_gap"])),
     ]
 
-    for i, unit in enumerate(data.get("units", [])):
-        table = make_table(unit, cfg, usable_width, continued_title_style)
-        title_text = unit_title(unit)
-        if title_text:
-            title = Paragraph(title_text, title_style)
-            block = [title, Spacer(1, inches(st["title_gap"])), table]
-        else:
-            # Untitled unit: print the table alone, with no heading or gap.
-            title = None
-            block = [table]
-
-        # Measure the complete unit before placing it.  KeepTogether is not used
-        # here: with maxHeight set it may unwrap the contents when the remaining
-        # frame is short, which lets an otherwise page-sized unit split.
-        #
-        # CondPageBreak gives us the exact rule we want:
-        #   * if this unit can fit on a fresh page, require that much remaining
-        #     space before starting it;
-        #   * if the unit is taller than a whole page, do not force a break, so
-        #     the Table can split naturally by rows.
-        if title is not None:
-            _title_w, title_h = title.wrap(usable_width, usable_height)
-            title_h += inches(st["title_gap"])
-        else:
-            title_h = 0.0
-        _table_w, table_h = table.wrap(usable_width, usable_height)
-        unit_height = title_h + table_h
-
-        if unit_height <= usable_height:
-            # The whole unit fits on one fresh page, so require enough room for
-            # the complete title + table before starting it.
-            required_start_height = unit_height
-        else:
-            # The unit must span pages. Do not start it near the bottom of a
-            # page unless there is room for the title, table header, and at
-            # least eight exercise rows. If the complete table has fewer than
-            # eight exercise rows, require the whole table instead.
-            minimum_start_rows = 8
-            table_start_height = min(
-                table_h,
-                table.header_height
-                + minimum_start_rows * inches(st["row_height"]),
-            )
-            required_start_height = title_h + table_start_height
-
-        story.append(CondPageBreak(required_start_height))
-        story.extend(block)
-        if i != len(data.get("units", [])) - 1:
-            story.append(Spacer(1, inches(st["unit_gap"])))
+    if "units" in data and "contents" not in data:
+        raise SystemExit(
+            'The top-level "units" list is no longer supported; put the units '
+            'under "contents" (see README.md).'
+        )
+    # The whole document is one table; it splits across pages by rows.
+    table = make_table(data.get("contents") or {}, cfg, usable_width, continued_title_style)
+    if table is not None:
+        story.append(table)
 
     doc.build(story)
 

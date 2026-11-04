@@ -12,7 +12,6 @@ config:
   paper_size: b5
 
   page:
-    orientation: portrait
     mirrored_margins: true
     margin_inside: 0.5
     margin_outside: 0.25
@@ -21,13 +20,10 @@ config:
 
   style:
     header_size: 10
-    row_height: 0.25
     exercise_col_fraction: 0.15
 
   table:
-    exercise_header:
     sessions: 6
-    session_headers: ["", "", "", "", "", "", ""]
 
 contents:
   repeats_each: 3

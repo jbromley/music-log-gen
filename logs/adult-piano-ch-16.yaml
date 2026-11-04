@@ -1,3 +1,4 @@
+---
 document_title: Adult Piano Chapters 16
 author: J. Bromley
 subject: practice log
@@ -10,7 +11,6 @@ config:
   paper_size: b5
 
   page:
-    orientation: portrait
     mirrored_margins: true
     margin_inside: 0.5
     margin_outside: 0.25
@@ -18,31 +18,24 @@ config:
     margin_bottom: 0.5
 
   style:
-    title_size: 12
     table_font_size: 8
-    row_height: 0.25
-    header_height: 0.30
     exercise_col_fraction: 0.18
     line_width: 0.75
-    outer_line_width: 1.0
-    title_gap: 0.08
-    unit_gap: 0.16
 
   table:
-    exercise_header: Exercise
     sessions: 6
-    session_headers: ["", "", "", "", "", "", ""]
 
-units:
-  - title: Chapter 16 - Primary Chords in G Major
-    repeats_each: 5
-    exercises:
-      - D7 Chord
-      - Alexander March
-      - Amazing Grace
-      - IV Chord Warm-up
-      - French Dance
-      - Polovtsian Dance
-      - Jolly Good Fellow
-      - Banuwa
-      - Music Box Etude
+contents:
+  repeats_each: 5
+  units:
+    - unit: Chapter 16 - Primary Chords in G Major
+      exercises:
+        - D7 Chord
+        - Alexander March
+        - Amazing Grace
+        - IV Chord Warm-up
+        - French Dance
+        - Polovtsian Dance
+        - Jolly Good Fellow
+        - Banuwa
+        - Music Box Etude

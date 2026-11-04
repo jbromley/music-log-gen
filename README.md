@@ -4,14 +4,12 @@ This generator creates US Letter practice-log sheets from a YAML or JSON definit
 
 ## Pagination rule
 
-For each unit:
+The whole log is one table that splits across pages by rows, except:
 
-1. The unit title and table are treated as one block.
-2. If the entire block fits in the remaining space on the current page, it is placed there.
-3. If it does not fit in the remaining space, but would fit on a fresh page, it is moved intact to the next page.
-4. If the unit itself is taller than a complete page, the table is allowed to split by rows. The column-header row repeats on continuation pages.
+1. A `repeats_each` block is never split across pages.
+2. A unit title or section row always stays on the same page as the exercises that follow it.
 
-This is the behavior that Google Sheets does not express cleanly with custom page breaks.
+Each continuation page starts with "(continued)".
 
 ## Run
 
@@ -30,61 +28,50 @@ pip install reportlab pyyaml
 ```yaml
 config:
   table:
-    sessions: 7
+    sessions: 6
 
-units:
-  - title: Rock Bass Unit 1
-    exercises:
-      - Exercise 1
-      - Exercise 2
-      - Exercise 3
+contents:
+  units:
+    - unit: Rock Bass Unit 1
+      exercises:
+        - Exercise 1
+        - Exercise 2
+    - unit: Rock Bass Unit 2
+      exercises:
+        - Exercise 1
 ```
 
-Each unit may override the number of practice-session columns:
+Each unit's title is a merged row inside the table, in a bold version of the
+table font at the table font size. A unit with a blank `unit:` gets no title
+row. An exercise with no name prints an empty row.
 
-```yaml
-- title: Rock Bass Unit 4
-  sessions: 6
-  exercises:
-    - Exercise 1
-    - Exercise 2
-```
-
-You can also put labels in the session columns:
-
-```yaml
-session_headers: ["1", "2", "3", "4", "5", "6", "7"]
-```
-
-Leaving `exercise_header` blank (in `config.table` or on a unit) removes the
-header row entirely:
-
-```yaml
-exercise_header:
-```
+`config.table.sessions` sets the number of practice-session columns; it can
+also be set under `contents`.
 
 ### Repeating exercises
 
-A unit can list its exercises more than once without repeating them in the
-YAML. Both options default to `1` and must be at least `1`.
+Both options default to `1` and must be at least `1`. Set under `contents`,
+`repeats_each` is the default for every unit and `repeats` repeats the whole
+table. Set on a unit, they apply to that unit only.
 
-`repeats` prints the whole exercise list the given number of times:
+`repeats` prints the exercise list the given number of times:
 
 ```yaml
-- title: Groove Drills
+- unit: Groove Drills
   repeats: 2
   exercises: [Exercise 1, Exercise 2, Exercise 3]
   # Rows: 1, 2, 3, 1, 2, 3
 ```
 
 A heavier rule (`config.style.repeat_line_width`) marks the end of each
-pass through the list.
+pass through the list. A unit's title row is printed once, before the first
+pass.
 
 `repeats_each` (or `repeats-each`) prints each exercise the given number of
 times in a row before moving to the next one:
 
 ```yaml
-- title: Scale Drills
+- unit: Scale Drills
   repeats_each: 2
   exercises: [Exercise 1, Exercise 2, Exercise 3]
   # Rows: 1, 1, 2, 2, 3, 3
@@ -97,23 +84,21 @@ The two options can be combined. `repeats_each` is applied first, then the
 resulting list is repeated:
 
 ```yaml
-- title: Combined
+- unit: Combined
   repeats: 2
   repeats_each: 3
   exercises: [A, B]
   # Rows: A, A, A, B, B, B, A, A, A, B, B, B
 ```
 
-A `repeats_each` block is never split across pages.
-
 ### Section rows
 
-A `section` entry adds a heading row inside the table. It is one merged cell
-the full width of the table, the same height as an exercise row, in a bold
-version of the table font:
+A `section` entry adds a label row inside the table. It is one merged cell
+the full width of the table, the same height as an exercise row, in an italic
+version of the table font at the table font size:
 
 ```yaml
-- title: Hanon
+- unit: Hanon
   exercises:
     - section: Left hand
     - Exercise 1
@@ -122,24 +107,24 @@ version of the table font:
     - Exercise 3
 ```
 
-A section row always stays on the same page as the exercise that follows it
-(the whole block when `repeats_each` is used). Section rows are printed once,
-not repeated by `repeats_each`, but they are repeated with the list by
-`repeats`. Set `config.style.section_font` to use a different font.
+A `- section:` entry can also sit between units in `contents.units`. Section
+rows are printed once, not repeated by `repeats_each`, but they are repeated
+with the list by `repeats`.
 
 ## Appearance controls
 
 The YAML `config.style` section controls:
 
-- title font and size
-- table font size
+- document title font, size and gap below it
+- running header (document title on later pages) font, size and position
+- table font and font size (`font`, `table_font_size`)
+- unit title and section fonts (`unit_font`, `section_font`; by default the
+  bold and italic versions of `font`)
+- "(continued)" font, size and gap
 - row height
-- header-row height
 - exercise-column width
-- border thickness
+- line widths (`line_width`, `outer_line_width`, `repeat_line_width`)
 - cell padding
-- spacing between title and table
-- spacing between units
 
 The `config.page` section controls margins and portrait/landscape orientation.
 

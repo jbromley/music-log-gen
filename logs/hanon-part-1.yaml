@@ -1,3 +1,4 @@
+---
 document_title: Hanon, Part 1
 author: J. Bromley
 subject: practice log
@@ -10,7 +11,6 @@ config:
   paper_size: b5
 
   page:
-    orientation: portrait
     mirrored_margins: true
     margin_inside: 0.5
     margin_outside: 0.25
@@ -18,42 +18,35 @@ config:
     margin_bottom: 0.5
 
   style:
-    title_size: 14
     table_font_size: 8
-    row_height: 0.25
-    header_height: 0.30
     exercise_col_fraction: 0.10
     line_width: 0.75
-    outer_line_width: 1.0
-    title_gap: 0.08
-    unit_gap: 0.16
 
   table:
-    exercise_header: Exercise
     sessions: 7
-    session_headers: ["", "", "", "", "", "", ""]
 
-units:
-  - title:
-    repeats_each: 6
-    exercises:
-      - 1
-      - 2
-      - 3
-      - 4
-      - 5
-      - 6
-      - 7
-      - 8
-      - 9
-      - 10
-      - 11
-      - 12
-      - 13
-      - 14
-      - 15
-      - 16
-      - 17
-      - 18
-      - 19
-      - 20
+contents:
+  repeats_each: 6
+  units:
+    - unit:
+      exercises:
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+        - 6
+        - 7
+        - 8
+        - 9
+        - 10
+        - 11
+        - 12
+        - 13
+        - 14
+        - 15
+        - 16
+        - 17
+        - 18
+        - 19
+        - 20
